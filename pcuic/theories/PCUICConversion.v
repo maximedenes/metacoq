@@ -26,7 +26,7 @@ Ltac pcuic := intuition eauto 5 with pcuic ||
 
 Hint Resolve eq_universe_leq_universe' : pcuic.
 
-Derive Signature for cumul assumption_context.
+Derive Signature for assumption_context.
  
 (* Bug in Equations ... *)
 (* Derive Signature for clos_refl_trans_1n. *)
@@ -35,6 +35,22 @@ Derive Signature for cumul assumption_context.
 Existing Class wf.
 
 Definition red01 Σ Γ t u : Type := (t = u) + red1 Σ Γ t u.
+
+
+Lemma upto_domain_red1_r {Σ Γ t u u'} :
+  red1 Σ Γ t u ->
+  upto_domain u u' ->
+  ∑ t', upto_domain t t' × red1 Σ Γ t' u'.
+Proof.
+  intros X Y; induction X using red1_ind_all in u', Y |- *; invs_utd.
+
+Local Tactic Notation "tac" integer(n)
+  := eexists; split; [|econstructor n].
+
+  - eexists; split. 1: econstructor.
+  - tac 2. 1: econstructor. 4: econstructor 2.
+  - tac 3; utd.
+
 
 Lemma upto_domain_red1_r {Σ Γ t u u'} :
   upto_domain t u ->
@@ -502,15 +518,21 @@ Proof.
 Qed.
 
 
+Arguments upto_domain_trans {_ _ _}.
+Arguments upto_domain_sym {_ _}.
 
 (** Remark that confluence is needed for transitivity of conv and cumul. *)
 
 Instance cumul_trans {cf:checker_flags} (Σ : global_env_ext) Γ :
   wf Σ -> Transitive (cumul Σ Γ).
 Proof.
-  intros wfΣ t u v X Y.
-  eapply cumul_alt in X as (t' & u' & tu & H1 & H2 & H3 & H4).
-  eapply cumul_alt in Y as (u'' & v' & uv & H5 & H6 & H7 & H8).
+  intros wfΣ t u v (t0 & t1 & u0 & u1 & H0 & H1 & H2 & H3 & H4)
+         (u0' & u1' & v0 & v1 & H5 & H6 & H7 & H8 & H9).
+  pose proof (upto_domain_trans (upto_domain_sym H4) H5) as H10; clear u H4 H5.
+  Print Assumptions upto_domain_beta_eta_r.
+
+
+
   destruct (beta_eta_confluence wfΣ H2 H5) as (w & w' & H9 & H10 & H11);
     clear u H2 H5.
   destruct (upto_domain_beta_eta_r H4 H9) as (w0 & H12 & H13); clear u' H4 H9.

@@ -36,37 +36,6 @@ Definition atom t :=
 
 (** Simple lemmas about reduction *)
 
-Lemma red1_red (Σ : global_env) Γ t u : red1 Σ Γ t u -> red Σ Γ t u.
-Proof. econstructor; eauto. constructor. Qed.
-Hint Resolve red1_red refl_red : core pcuic.
-
-Lemma red_step Σ Γ t u v : red1 Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
-Proof.
-  induction 2.
-  - econstructor; auto.
-  - econstructor 2; eauto.
-Qed.
-
-Lemma red_alt@{i j +} Σ Γ t u : red Σ Γ t u <~> clos_refl_trans@{i j} (red1 Σ Γ) t u.
-Proof.
-  split.
-  - intros H. apply clos_rt_rtn1_iff.
-    induction H; econstructor; eauto.
-  - intros H. apply clos_rt_rtn1_iff in H.
-    induction H; econstructor; eauto.
-Qed.
-
-Lemma red_trans Σ Γ t u v : red Σ Γ t u -> red Σ Γ u v -> red Σ Γ t v.
-Proof.
-  intros. apply red_alt. apply red_alt in X. apply red_alt in X0. now econstructor 3.
-Defined.
-
-Instance red_Transitive Σ Γ : Transitive (red Σ Γ).
-Proof. refine (red_trans _ _). Qed.
-
-Instance red_Reflexive Σ Γ : Reflexive (red Σ Γ)
-  := refl_red _ _.
-
 (** Generic method to show that a relation is closed by congruence using
     a notion of one-hole context. *)
 
@@ -202,10 +171,10 @@ Section ReductionCongruence.
 
   Lemma contextual_closure_red Γ t u : contextual_closure (red Σ) Γ t u -> red Σ Γ t u.
   Proof.
-    induction 1. 1: constructor.
-    apply red_alt in r. apply clos_rt_rt1n in r.
-    induction r. 1: constructor.
-    apply clos_rt_rt1n_iff in r0. apply red_alt in r0.
+    induction 1; [reflexivity|].
+    apply clos_rt_rt1n in r.
+    induction r; [reflexivity|].
+    apply clos_rt_rt1n_iff in r0.
     eapply red_step; eauto. clear r0 IHr z.
     set (P := fun ctx t => forall Γ y, red1 Σ (hole_context ctx Γ) x y ->
                                      red1 Σ Γ t (fill_context y ctx)).
@@ -264,8 +233,8 @@ Section ReductionCongruence.
       - destruct p as [p1 p2].
         unfold on_Trel in p1, p2.
         destruct hd as [t a], hd' as [t' a']. simpl in *. subst.
-        induction p1.
-        + constructor.
+        eapply clos_rt_rtn1_iff in p1. induction p1.
+        + now repeat econstructor.
         + econstructor.
           * eapply IHp1.
           * constructor. split ; eauto.
@@ -385,10 +354,9 @@ Section ReductionCongruence.
         red Σ Γ (tApp u v1) (tApp u v2).
     Proof.
       intro h. revert u. induction h ; intros u.
-      - constructor.
-      - econstructor.
-        + eapply IHh.
-        + constructor. assumption.
+      - now repeat constructor.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Lemma red_app M0 M1 N0 N1 :
@@ -435,10 +403,9 @@ Section ReductionCongruence.
         red Σ Γ (mkApps t l) (mkApps u l).
     Proof.
       intros t u π h. induction h.
-      - constructor.
-      - econstructor.
-        + eapply IHh.
-        + eapply red1_mkApps_f. assumption.
+      - econstructor. now eapply red1_mkApps_f. 
+      - reflexivity.
+      -etransitivity; eauto.
     Qed.
 
     Lemma red_mkApps M0 M1 N0 N1 :
@@ -446,7 +413,7 @@ Section ReductionCongruence.
       All2 (red Σ Γ) N0 N1 ->
       red Σ Γ (mkApps M0 N0) (mkApps M1 N1).
     Proof.
-      intros.
+      intros X X0. 
       induction X0 in M0, M1, X |- *. 1: auto.
       simpl. eapply IHX0. now eapply red_app.
     Qed.
@@ -469,9 +436,9 @@ Section ReductionCongruence.
     Proof.
       intros indn p c brs p' h.
       induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      - now repeat constructor.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Lemma red_case_c :
@@ -481,9 +448,9 @@ Section ReductionCongruence.
     Proof.
       intros indn p c brs c' h.
       induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      - now repeat constructor.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Derive Signature for redl.
@@ -496,8 +463,8 @@ Section ReductionCongruence.
       intros indn p c brs brs' h.
       apply OnOne2_on_Trel_eq_red_redl in h.
       dependent induction h.
-      - apply list_map_swap_eq in H. subst. constructor.
-      - econstructor.
+      - apply list_map_swap_eq in H. now subst.
+      - eapply trans_red.
         + eapply IHh. rewrite <- map_swap_invol. reflexivity.
         + constructor. rewrite (map_swap_invol _ _ brs').
           eapply OnOne2_map.
@@ -538,7 +505,7 @@ Section ReductionCongruence.
       intros indn p c brs brs' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_case_one_brs. assumption.
@@ -618,10 +585,9 @@ Section ReductionCongruence.
     Proof.
       intros Δ u v h.
       induction h.
-      - constructor.
-      - econstructor.
-        + eassumption.
-        + eapply red1_it_mkLambda_or_LetIn. assumption.
+      - constructor. eapply red1_it_mkLambda_or_LetIn. assumption.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Lemma red_it_mkProd_or_LetIn :
@@ -632,10 +598,9 @@ Section ReductionCongruence.
     Proof.
       intros Δ u v h.
       induction h.
-      - constructor.
-      - econstructor.
-        + eassumption.
-        + eapply red1_it_mkProd_or_LetIn. assumption.
+      - constructor. eapply red1_it_mkProd_or_LetIn; assumption.
+      - reflexivity.
+      - etransitivity; eassumption.
     Qed.
 
     Lemma red_proj_c :
@@ -645,10 +610,9 @@ Section ReductionCongruence.
     Proof.
       intros p c c' h.
       induction h in p |- *.
-      - constructor.
-      - econstructor.
-        + eapply IHh.
-        + econstructor. assumption.
+      - now repeat constructor.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Lemma red_fix_one_ty :
@@ -663,7 +627,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *.
         set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -676,7 +640,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -694,7 +658,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_fix_one_ty. assumption.
@@ -714,7 +678,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dbody x, (dname x, dtype x, rarg x))) in *.
         set (g := fun '(bo, (na, ty, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -727,7 +691,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + eapply fix_red_body. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -771,7 +735,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_fix_one_body.
@@ -848,7 +812,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dtype x, (dname x, dbody x, rarg x))) in *.
         set (g := fun '(ty, (na, bo, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -861,7 +825,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -879,7 +843,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_cofix_one_ty. assumption.
@@ -899,7 +863,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. destruct y, z. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : def term => (dbody x, (dname x, dtype x, rarg x))) in *.
         set (g := fun '(bo, (na, ty, ra)) => mkdef term na ty bo ra).
         assert (el :  forall l, l = map f (map g l)).
@@ -912,7 +876,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. destruct a. cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + eapply cofix_red_body. rewrite (el' mfix').
           eapply OnOne2_map.
@@ -956,7 +920,7 @@ Section ReductionCongruence.
       intros mfix idx mfix' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_cofix_one_body.
@@ -1028,9 +992,9 @@ Section ReductionCongruence.
     Proof.
       intros na A B A' h.
       induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      - now repeat constructor.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Lemma red_prod_r :
@@ -1040,9 +1004,9 @@ Section ReductionCongruence.
     Proof.
       intros na A B B' h.
       induction h.
-      - constructor.
-      - econstructor ; try eassumption.
-        constructor. assumption.
+      - now repeat constructor.
+      - reflexivity.
+      - etransitivity; eauto.
     Qed.
 
     Lemma red_prod :
@@ -1079,7 +1043,7 @@ Section ReductionCongruence.
         { eapply map_inj ; eauto.
           intros y z e. cbn in e. inversion e. eauto.
         } subst.
-        constructor.
+        reflexivity.
       - set (f := fun x : term => (x, tt)) in *.
         set (g := (fun '(x, _) => x) : term × unit -> term).
         assert (el :  forall l, l = map f (map g l)).
@@ -1092,7 +1056,7 @@ Section ReductionCongruence.
           - reflexivity.
           - cbn. f_equal. assumption.
         }
-        econstructor.
+        eapply trans_red.
         + eapply IHh. symmetry. apply el.
         + constructor. rewrite (el' l').
           eapply OnOne2_map.
@@ -1110,7 +1074,7 @@ Section ReductionCongruence.
       intros ev l l' h.
       apply All2_many_OnOne2 in h.
       induction h.
-      - constructor.
+      - reflexivity.
       - eapply red_trans.
         + eapply IHh.
         + eapply red_one_evar. assumption.
@@ -1118,7 +1082,7 @@ Section ReductionCongruence.
 
     Lemma red_atom t : atom t -> red Σ Γ t t.
     Proof.
-      intros. constructor.
+      intros. reflexivity.
     Qed.
 
   End Congruences.
@@ -1204,10 +1168,9 @@ Section Stacks.
       red Σ Γ (zip (t, π)) (zip (u, π)).
   Proof.
     intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_context. assumption.
+    - constructor. eapply red1_context. assumption.
+    - reflexivity.
+    - etransitivity; eauto.
   Qed.
 
   Lemma red1_zipp :
@@ -1228,10 +1191,9 @@ Section Stacks.
       red Σ Γ (zipp t π) (zipp u π).
   Proof.
     intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_zipp. assumption.
+    - constructor. eapply red1_zipp. assumption.
+    - reflexivity.
+    - etransitivity; eauto.
   Qed.
 
   Lemma red1_zippx :
@@ -1255,10 +1217,9 @@ Section Stacks.
       red Σ Γ (zippx t π) (zippx u π).
   Proof.
     intros Γ t u π h. induction h.
-    - constructor.
-    - econstructor.
-      + eapply IHh.
-      + eapply red1_zippx. assumption.
+    - constructor. eapply red1_zippx. assumption.
+    - reflexivity.
+    - etransitivity; eauto.
   Qed.
 
 End Stacks.

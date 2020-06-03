@@ -1594,6 +1594,58 @@ Proof.
   all: rewrite (All2_length _ _ X0); solve_all.
 Qed.
 
+Lemma eta1_rename u v f :
+  eta1 u v -> eta1 (rename f u) (rename f v).
+Proof.
+  induction 1 using eta1_ind_all in f |- *; cbn; try (econstructor; eauto; fail).
+  - rewrite rename_shiftn. constructor.
+  - econstructor.
+    eapply OnOne2_map. solve_all.
+  - econstructor.
+    eapply OnOne2_map. solve_all.
+  - econstructor.
+    rewrite (OnOne2_length X).
+    eapply OnOne2_map. solve_all.
+    split; cbn; invs b; eauto.
+  - eapply fix_eta_body.
+    rewrite (OnOne2_length X).
+    eapply OnOne2_map. solve_all.
+    split; cbn; invs b; eauto.
+  - econstructor.
+    rewrite (OnOne2_length X).
+    eapply OnOne2_map. solve_all.
+    split; cbn; invs b; eauto.
+  - eapply cofix_eta_body.
+    rewrite (OnOne2_length X).
+    eapply OnOne2_map. solve_all.
+    split; cbn; invs b; eauto.
+Qed.
+
+Lemma beta_eta1_rename :
+  forall Σ Γ Δ u v f,
+    wf Σ ->
+    urenaming Δ Γ f ->
+    beta_eta1 Σ Γ u v ->
+    beta_eta1 Σ Δ (rename f u) (rename f v).
+Proof.
+  intros Σ Γ Δ u v f X X0 [];
+    [left; now eapply red1_rename|right; now eapply eta1_rename].
+Qed.
+
+Lemma beta_eta_rename :
+  forall Σ Γ Δ u v f,
+    wf Σ ->
+    urenaming Δ Γ f ->
+    beta_eta Σ Γ u v ->
+    beta_eta Σ Δ (rename f u) (rename f v).
+Proof.
+  intros Σ Γ Δ u v f X X0 X1; induction X1.
+  - constructor; now eapply beta_eta1_rename.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
+
 (* TODO UPDATE We need to add rename_stack *)
 Lemma cumul_rename :
   forall Σ Γ Δ f A B,
@@ -1602,19 +1654,13 @@ Lemma cumul_rename :
     Σ ;;; Γ |- A <= B ->
     Σ ;;; Δ |- rename f A <= rename f B.
 Proof.
-  intros Σ Γ Δ f A B hΣ hf h.
-  induction h.
-  - eapply cumul_refl.
-    + eapply eq_term_upto_univ_rename. eassumption.
-    + now apply upto_domain_rename.
-  - eapply cumul_red_l.
-    + eapply red1_rename. all: try eassumption.
-    + assumption.
-  - eapply cumul_red_r.
-    + eassumption.
-    + eapply red1_rename. all: try eassumption.
-  - todoeta. (* eapply cumul_eta_l. *)
-  - todoeta.
+  intros Σ Γ Δ f A B hΣ hf.
+  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists (rename f t'), (rename f t''), (rename f u'), (rename f u'');
+    repeat split.
+  1,5: now apply upto_domain_rename.
+  2: now eapply eq_term_upto_univ_rename.
+  all: now eapply beta_eta_rename.
 Qed.
 
 Lemma typing_rename_prop : env_prop

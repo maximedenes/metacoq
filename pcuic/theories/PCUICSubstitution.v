@@ -1658,7 +1658,7 @@ Proof.
            simpl. rewrite subst_skipn. 1: auto with arith.
            rewrite simpl_lift; auto with arith.
            assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia.
-           constructor.
+           reflexivity.
         -- noconf H.
       * apply nth_error_None in Heq.
         assert(S i = #|s| + (S (i - #|s|))) by lia.
@@ -1692,7 +1692,7 @@ Proof.
     now rewrite nth_error_map H.
 
   - specialize (IHred1 Γ0 Δ Γ' eq_refl wfΓ Hs).
-    apply red_abs. 1: auto. constructor.
+    apply red_abs. 1: auto. reflexivity.
 
   - specialize (IHred1 Γ0 Δ (Γ' ,, _) eq_refl wfΓ Hs).
     apply red_abs; auto.
@@ -1825,7 +1825,7 @@ Proof.
         simpl. rewrite subst_skipn. 1: auto with arith.
         rewrite simpl_lift; auto with arith.
         assert(S (i - #|Γ'|) + #|Γ'| = S i) as -> by lia.
-        constructor.
+        reflexivity.
       * apply nth_error_None in Heq.
         assert(S i = #|s| + (S (i - #|s|))) by lia.
         rewrite H1. rewrite -> simpl_subst; try lia.
@@ -1858,7 +1858,7 @@ Proof.
     now rewrite nth_error_map H.
 
   - specialize (IHred1 Γ0 Δ Γ' eq_refl Hs).
-    apply red_abs. 1: auto. constructor.
+    apply red_abs. 1: auto. reflexivity.
 
   - specialize (IHred1 Γ0 Δ (Γ' ,, _) eq_refl Hs).
     apply red_abs; auto with pcuic.
@@ -1964,10 +1964,9 @@ Lemma substitution_untyped_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
 Proof.
   intros wfΣ subsl.
   induction 1. 
-  - constructor.
-  - etransitivity.
-    * eapply IHX.
-    * eapply substitution_untyped_let_red; eauto.
+  - eapply substitution_untyped_let_red; eauto.
+  - reflexivity.
+  - etransitivity; eauto.
 Qed.
 
 Lemma subst_eq_decl `{checker_flags} ϕ l k d d' :
@@ -1993,9 +1992,10 @@ Lemma substitution_red `{cf : checker_flags} (Σ : global_env_ext) Γ Δ Γ' s M
   red Σ (Γ ,,, Δ ,,, Γ') M N ->
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
-  intros HG Hs Hl Hred. induction Hred. 1: constructor.
-  eapply red_trans with (subst s #|Γ'| P); auto.
-  eapply substitution_let_red; eauto.
+  intros HG Hs Hl Hred. induction Hred.
+  - eapply substitution_let_red; eauto.
+  - reflexivity.
+  - etransitivity; eauto.
 Qed.
 
 Lemma red_red {cf:checker_flags} (Σ : global_env) Γ Γ' s s' b : wf Σ ->
@@ -2018,8 +2018,8 @@ Proof.
       * destruct (All2_nth_error_Some _ _ Hall Heq') as [t' [-> Ptt']].
         intros. apply (weakening_red Σ Γ [] Γ' t t'); auto.
       * rewrite (All2_nth_error_None _ Hall Heq').
-        apply All2_length in Hall as ->. constructor.
-    + constructor.
+        apply All2_length in Hall as ->. reflexivity.
+    + reflexivity.
 
   - apply red_evar. apply All2_map. solve_all.
   - apply red_prod; eauto.
@@ -2052,9 +2052,10 @@ Lemma untyped_substitution_red {cf:checker_flags} Σ Γ Δ Γ' s M N :
   red Σ (Γ ,,, Δ ,,, Γ') M N ->
   red Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
 Proof.
-  intros HG Hs Hred. induction Hred. 1: constructor.
-  eapply red_trans with (subst s #|Γ'| P); auto.
-  eapply substitution_untyped_let_red; eauto.
+  intros HG Hs Hred. induction Hred.
+  - eapply substitution_untyped_let_red; eauto.
+  - reflexivity.
+  - etransitivity; eauto.
 Qed.
 
 (** The cumulativity relation is substitutive, yay! *)
@@ -2259,23 +2260,37 @@ Proof.
 Qed.
 Hint Resolve upto_domain_subst1 : utd.
 
+Lemma substitution_untyped_let_beta_eta1 {cf:checker_flags} Σ Γ Δ Γ' s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  beta_eta1 Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beta_eta Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 []; [apply red_beta_eta; now eapply substitution_untyped_let_red
+                  |constructor; right; now eapply eta1_subst].
+Qed.
+
+Lemma substitution_untyped_let_beta_eta {cf:checker_flags} Σ Γ Δ Γ' s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  beta_eta Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beta_eta Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 X1; induction X1.
+  - now eapply substitution_untyped_let_beta_eta1.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
-  intros wfΣ Hs. induction 1.
-  - econstructor.
-    + apply subst_leq_term; eassumption.
-    + now apply substitution_upto_domain.
-  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
-    eapply red_cumul_cumul; eauto.
-  - eapply substitution_untyped_let_red in r. 3:eauto. all:eauto with wf.
-    eapply red_cumul_cumul_inv; eauto.
-  - eapply cumul_eta_l. 2: eassumption.
-    eapply eta1_subst. assumption.
-  - eapply cumul_eta_r. 1: eassumption.
-    eapply eta1_subst. assumption.
+  intros wfΣ Hs (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists (subst s #|Γ''| t'), (subst s #|Γ''| t''),
+  (subst s #|Γ''| u'), (subst s #|Γ''| u''); repeat split.
+  1,5: now apply substitution_upto_domain.
+  2: apply subst_leq_term; eassumption.
+  all: now eapply substitution_untyped_let_beta_eta.
 Qed.
 
 Lemma substitution_cumul0 {cf:checker_flags} Σ Γ na t u u' a : wf Σ.1 ->
@@ -2300,6 +2315,30 @@ Proof.
   simpl in X. now apply X.
 Qed.
 
+
+Lemma substitution_let_beta_eta1 {cf:checker_flags} (Σ : global_env_ext)
+      Γ Δ Γ' s M N :
+  wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->
+  beta_eta1 Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beta_eta Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 wfΓ []; [apply red_beta_eta; now eapply substitution_let_red
+                      |constructor; right; now eapply eta1_subst].
+Qed.
+
+Lemma substitution_let_beta_eta {cf:checker_flags} (Σ : global_env_ext)
+      Γ Δ Γ' s M N :
+  wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->
+  beta_eta Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beta_eta Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 wfΓ X1; induction X1.
+  - now eapply substitution_let_beta_eta1.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
+
 (** The cumulativity relation is substitutive, yay! *)
 
 Lemma substitution_cumul `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ'' s M N :
@@ -2307,19 +2346,14 @@ Lemma substitution_cumul `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ''
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
-  intros wfΣ wfΓ Hs. induction 1.
-  - econstructor.
-    + apply subst_leq_term; eassumption.
-    + now eapply substitution_upto_domain.
-  - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
-    eapply red_cumul_cumul; eauto.
-  - eapply substitution_let_red in r. 4:eauto. all:eauto with wf.
-    eapply red_cumul_cumul_inv; eauto.
-  - eapply cumul_eta_l. 2: eassumption.
-    eapply eta1_subst. assumption.
-  - eapply cumul_eta_r. 1: eassumption.
-    eapply eta1_subst. assumption.
+  intros wfΣ wfΓ Hs (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists (subst s #|Γ''| t'), (subst s #|Γ''| t''),
+  (subst s #|Γ''| u'), (subst s #|Γ''| u''); repeat split.
+  1,5: now apply substitution_upto_domain.
+  2: apply subst_leq_term; eassumption.
+  all: eapply substitution_let_beta_eta; eauto with wf.
 Qed.
+
 
 (** Old substitution lemma without lets *)
 (*

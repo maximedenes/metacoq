@@ -22,60 +22,36 @@ Reserved Notation " Σ ;;; Γ |- t == u " (at level 50, Γ, t, u at next level).
 
 
 (* todo move *)
-Lemma eta_cumul_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
-  eta t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
-Proof.
-  induction 1 in v |- *; auto.
-  intro. econstructor 4; eassumption.
-Qed.
+(* Lemma eta_cumul_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} : *)
+(*   eta t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v. *)
+(* Proof. *)
+(*   induction 1 in v |- *; auto. *)
+(*   intro. econstructor 4; eassumption. *)
+(* Qed. *)
 
-Lemma eta_cumul_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
-  eta t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t.
-Proof.
-  induction 1 in u |- *; auto.
-  intro. econstructor 5; eassumption.
-Qed.
+(* Lemma eta_cumul_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} : *)
+(*   eta t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t. *)
+(* Proof. *)
+(*   induction 1 in u |- *; auto. *)
+(*   intro. econstructor 5; eassumption. *)
+(* Qed. *)
 
-Lemma beta_eta_cumul_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
-  beta_eta Σ Γ t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v.
-Proof.
-  induction 1 in v |- *; auto.
-  destruct r; [eauto using red_cumul_cumul|].
-  apply eta_cumul_cumul; eta.
-Qed.
+(* Lemma beta_eta_cumul_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} : *)
+(*   beta_eta Σ Γ t u -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- t <= v. *)
+(* Proof. *)
+(*   induction 1 in v |- *; auto. *)
+(*   destruct r; [eauto using red_cumul_cumul|]. *)
+(*   apply eta_cumul_cumul; eta. *)
+(* Qed. *)
 
-Lemma beta_eta_cumul_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} :
-  beta_eta Σ Γ t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t.
-Proof.
-  induction 1 in u |- *; auto.
-  destruct r; [eauto using red_cumul_cumul_inv|].
-  apply eta_cumul_cumul_inv; eta.
-Qed.
+(* Lemma beta_eta_cumul_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u v} : *)
+(*   beta_eta Σ Γ t v -> Σ ;;; Γ |- u <= v -> Σ ;;; Γ |- u <= t. *)
+(* Proof. *)
+(*   induction 1 in u |- *; auto. *)
+(*   destruct r; [eauto using red_cumul_cumul_inv|]. *)
+(*   apply eta_cumul_cumul_inv; eta. *)
+(* Qed. *)
 
-
-Lemma cumul_alt `{cf : checker_flags} Σ Γ t u :
-  Σ ;;; Γ |- t <= u <~>
-  ∑ t' u' v, beta_eta Σ Γ t t' ×
-             beta_eta Σ Γ u u' ×
-             leq_term Σ t' v ×
-             upto_domain v u'.
-Proof.
-  split.
-  - induction 1.
-    + exists t, v, u; beta_eta.
-    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
-      exists t', u', v0; beta_eta.
-    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
-      exists t', u', v0; beta_eta.
-    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
-      exists t', u', v0; beta_eta.
-    + destruct IHX as (t' & u' & v0 & ? & ? & ? & ?).
-      exists t', u', v0; beta_eta.
-  - intros (t' & u' & ? & ? & ? & ? & ?).
-    eapply beta_eta_cumul_cumul; tea.
-    eapply beta_eta_cumul_cumul_inv; tea.
-    econstructor; tea.
-Qed.
 
 (* Lemma cumul_alt `{cf : checker_flags} Σ Γ t u : *)
 (*   Σ ;;; Γ |- t <= u <~> *)
@@ -169,25 +145,10 @@ Qed.
 Lemma conv_cumul2 {cf:checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
 Proof.
-  induction 1.
-  - split.
-    + econstructor; try apply eq_term_leq_term; eassumption.
-    + symmetry in e. symmetry in u0.
-      destruct (upto_domain_eq_term_com u0 e) as [? p].
-      econstructor; try apply p.
-      apply eq_term_leq_term; apply p.
-  - destruct IHX as [H1 H2]. split.
-    * econstructor 2; eassumption.
-    * econstructor 3; eassumption.
-  - destruct IHX as [H1 H2]. split.
-    * econstructor 3; eassumption.
-    * econstructor 2; eassumption.
-  - destruct IHX as [H1 H2]. split.
-    * econstructor 4; eassumption.
-    * econstructor 5; eassumption.
-  - destruct IHX as [H1 H2]. split.
-    * econstructor 5; eassumption.
-    * econstructor 4; eassumption.
+  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  split.
+  - exists t', t'', u', u''; repeat split; tas; try now apply eq_term_leq_term.
+  - exists u', u'', t', t''; repeat split; tas; try now apply eq_term_leq_term.
 Qed.
 
 Lemma conv_cumul {cf:checker_flags} Σ Γ t u :
@@ -212,18 +173,8 @@ Abort.
 Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
   Symmetric (conv Σ Γ).
 Proof.
-  intros t u X. induction X.
-  - symmetry in e. symmetry in u0.
-    destruct (upto_domain_eq_term_com u0 e).
-    econstructor; apply p.
-  - eapply red_conv_conv_inv.
-    + eapply red1_red in r. eauto.
-    + eauto.
-  - eapply red_conv_conv.
-    + eapply red1_red in r. eauto.
-    + eauto.
-  - eapply conv_eta_r. all: eassumption.
-  - eapply conv_eta_l. all: eassumption.
+  intros ? ? (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists u', u'', t', t''; repeat split; tas; now symmetry.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
@@ -274,7 +225,5 @@ Proof.
   (* intro H. *)
   (* cut (H = H); [|reflexivity]. *)
   (* induction H. *)
-  induction 1;
-    [econstructor 1|econstructor 2|econstructor 3|econstructor 4|econstructor 5];
-    tea; econstructor; tea; try reflexivity .
-Defined.
+  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+Admitted.

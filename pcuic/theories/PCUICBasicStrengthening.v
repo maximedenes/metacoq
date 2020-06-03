@@ -20,7 +20,6 @@ From Equations Require Import Equations Relation.
 
 Derive Signature for red1.
 Derive Signature for OnOne2.
-Derive Signature for cumul.
 
 Lemma lift_Apps_Ind_inv n k M ind u args
       (H : lift n k M = mkApps (tInd ind u) args)
@@ -978,12 +977,118 @@ Proof.
   intro H. now apply lift_lift_inv in H.
 Qed.
 
-
-Lemma eta_strengthening n k M N' :
-  eta (lift n k M) N'
-  -> ∑ N, eta M N × N' = lift n k N.
+Lemma lift_lift_inv0' n k M N :
+  lift0 1 M = lift n (S k) N
+  -> ∑ M', M = lift n k M' /\ N = lift0 1 M'.
 Proof.
-Admitted.
+  intro X; destruct (lift_lift_inv0 _ _ _ _ X) as [M' e].
+  exists M'. split; tas. rewrite e in X.
+  apply (lift_inj 1 0); rewrite X.
+ rewrite (permute_lift M' n k 1 0); f_equal; lia.
+Qed.
+
+
+Lemma eta1_strengthening n k M N' :
+  eta1 (lift n k M) N'
+  -> ∑ N, eta1 M N × N' = lift n k N.
+Proof.
+  induction M in k, N' |- * using term_forall_list_ind; cbn;
+    intro XX; invs XX.
+  - enough (∑ l'', OnOne2 eta1 l l'' × l' = map (lift n k) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tEvar n0 l''); eta. }
+    induction X in l', X0 |- *; cbn in *; invs X0.
+    + apply p in X1 as [v [? ?]]; subst. 
+      exists (v :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tProd n0 N M2); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tProd n0 M1 N); eta.
+  - destruct M2; invs H2.
+    destruct M2_2; invs H1.
+    apply lift_lift_inv0' in H0 as [? [? ?]]; subst.
+    assert (n1 = 0); [|subst n1]. {
+      destruct (S k <=? n1); lia. }
+    exists x; eta.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tLambda n0 N M2); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tLambda n0 M1 N); eta.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tLetIn n0 N M2 M3); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tLetIn n0 M1 N M3); eta.
+  - apply IHM3 in X as [N [? ?]]; subst.
+    exists (tLetIn n0 M1 M2 N); eta.
+  - apply IHM1 in X as [N [? ?]]; subst.
+    exists (tApp N M2); eta.
+  - apply IHM2 in X as [N [? ?]]; subst.
+    exists (tApp M1 N); eta.
+  - apply IHM1 in X0 as [N [? ?]]; subst.
+    exists (tCase p N M2 l); eta.
+  - apply IHM2 in X0 as [N [? ?]]; subst.
+    exists (tCase p M1 N l); eta.
+  - enough (∑ l'', OnOne2 (on_Trel_eq eta1 snd fst) l l''
+                   × brs' = map (on_snd (lift n k)) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tCase p M1 M2 l''); eta. }
+    induction X in brs', X0 |- *; cbn in *; invs X0.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p0 in X1 as [v [? ?]]; subst. 
+      exists ((n1, v) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - apply IHM in X as [N [? ?]]; subst.
+    exists (tProj s N); eta.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+             × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 v dbody rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+             × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 dtype v rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
+             × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tCoFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 v dbody rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+  - enough (∑ l'', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
+             × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) m l''
+             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
+      destruct XX as [l'' [? ?]]; subst. exists (tCoFix l'' n0); eta.
+      now rewrite (OnOne2_length o). }
+    set (K := #|m|) in *; clearbody K.
+    induction X in mfix1, X0 |- *; invs X0; cbn in *.
+    + destruct X1 as [X1 ?], x, hd'; cbn in *.
+      apply p in X1 as [v [? ?]]; subst. invs e.
+      exists ((mkdef _ dname0 dtype v rarg0) :: l); eta. now constructor.
+    + apply IHX in X1 as [l'' [? ?]]; subst.
+      exists (x :: l''); eta. now constructor.
+Qed.
 
 (** This lemma is wrong *)
 Lemma eta_strengthening_inv n k M' N :
@@ -998,19 +1103,19 @@ Lemma cumul_strengthening {cf:checker_flags} Σ Γ Γ' Γ'' M N' :
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= N'
   -> ∑ N, Σ;;; Γ ,,,  Γ' |- M <= N × N' = lift #|Γ''| #|Γ'| N.
 Proof.
-  intros HΣ Z H; dependent induction H.
-  - apply eq_term_upto_univ_strengthening in l; try exact _.
-    destruct l as [N [H1 H2]]; subst.
-    (* eexists; split; [|reflexivity]. now constructor. *)
-    admit.
-  - apply red1_strengthening in r; tas.
-    destruct r as [N [H1 H2]]; subst.
-    edestruct IHcumul as [? [? ?]]; tas; try reflexivity; tas; subst.
-    eexists; split; [econstructor 2; eassumption|]. reflexivity.
-  - destruct IHcumul as [N [H1 H2]]; tas; subst.
-    1: admit. (* SR ! *)
-    eexists; split; [econstructor 3; tea|].
-    (* We don't have red1_strengthening_inv *)
+  (* intros HΣ Z H; dependent induction H. *)
+  (* - apply eq_term_upto_univ_strengthening in l; try exact _. *)
+  (*   destruct l as [N [H1 H2]]; subst. *)
+  (*   (* eexists; split; [|reflexivity]. now constructor. *) *)
+  (*   admit. *)
+  (* - apply red1_strengthening in r; tas. *)
+  (*   destruct r as [N [H1 H2]]; subst. *)
+  (*   edestruct IHcumul as [? [? ?]]; tas; try reflexivity; tas; subst. *)
+  (*   eexists; split; [econstructor 2; eassumption|]. reflexivity. *)
+  (* - destruct IHcumul as [N [H1 H2]]; tas; subst. *)
+  (*   1: admit. (* SR ! *) *)
+  (*   eexists; split; [econstructor 3; tea|]. *)
+  (*   (* We don't have red1_strengthening_inv *) *)
 Abort.
 
 Lemma cumul_strengthening_inv {cf:checker_flags} Σ Γ Γ' Γ'' M' N :
@@ -1027,20 +1132,20 @@ Lemma cumul_strengthening' {cf:checker_flags} Σ Γ Γ' Γ'' M N :
                                    |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N
   -> Σ;;; Γ ,,,  Γ' |- M <= N.
 Proof.
-  intros HΣ H; dependent induction H.
-  - 
-    (* apply eq_term_upto_univ_strengthening' in l; try exact _. *)
-    (* now constructor. *)
-    admit.
-  - apply red1_strengthening in r; tas.
-    destruct r as [N' [H1 H2]]; subst.
-    econstructor 2; tea. now apply IHcumul.
-  - apply red1_strengthening in r; tas.
-    destruct r as [N' [H1 H2]]; subst.
-    econstructor 3; tea. now eapply IHcumul.
-  - econstructor 4. 2: eapply IHcumul; tas. all: admit.
-  - econstructor 5. 1: eapply IHcumul; tas. all: admit.
-    (* In both cases we don't have eta_strengthening *)
+  (* intros HΣ H; dependent induction H. *)
+  (* -  *)
+  (*   (* apply eq_term_upto_univ_strengthening' in l; try exact _. *) *)
+  (*   (* now constructor. *) *)
+  (*   admit. *)
+  (* - apply red1_strengthening in r; tas. *)
+  (*   destruct r as [N' [H1 H2]]; subst. *)
+  (*   econstructor 2; tea. now apply IHcumul. *)
+  (* - apply red1_strengthening in r; tas. *)
+  (*   destruct r as [N' [H1 H2]]; subst. *)
+  (*   econstructor 3; tea. now eapply IHcumul. *)
+  (* - econstructor 4. 2: eapply IHcumul; tas. all: admit. *)
+  (* - econstructor 5. 1: eapply IHcumul; tas. all: admit. *)
+  (*   (* In both cases we don't have eta_strengthening *) *)
 Abort.
 
 

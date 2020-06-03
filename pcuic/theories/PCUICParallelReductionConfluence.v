@@ -2680,15 +2680,6 @@ Section Rho.
     eapply All2_local_env_fold_context.
   Qed.
 
-  Lemma All2_local_env_impl P Q Γ Δ :
-    All2_local_env P Γ Δ ->
-    (forall Γ Δ t T U, #|Γ| = #|Δ| -> P Γ Δ t T U -> Q Γ Δ t T U) ->
-    All2_local_env Q Γ Δ.
-  Proof.
-    intros H HP. pose proof (All2_local_env_length H).
-    induction H; constructor; simpl; eauto.
-  Qed.
-
   Lemma decompose_app_rec_inst s t l :
     let (f, a) := decompose_app_rec t l in
     inst s f = f ->

@@ -667,9 +667,9 @@ Lemma weakening_red `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   red Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
 Proof.
   intros wfΣ; induction 1.
-  - constructor.
-  - eapply red_trans with (lift #|Γ''| #|Γ'| P); eauto.
-    simpl; eapply red1_red. eapply weakening_red1; auto.
+  - constructor. now eapply weakening_red1.
+  - reflexivity.
+  - etransitivity; eauto.
 Qed.
 
 Fixpoint lift_stack n k π :=
@@ -824,6 +824,19 @@ Proof.
 Defined.
 
 
+Lemma weakening_beta_eta `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
+  wf Σ ->
+  beta_eta Σ (Γ ,,, Γ') M N ->
+  beta_eta Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
+Proof.
+  intros wfΣ; induction 1.
+  - constructor. destruct r; [left; eapply weakening_red1|
+                              right; eapply weakening_eta1]; tea.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
+
 Lemma weakening_upto_domain u v :
   upto_domain u v -> forall n k, upto_domain (lift n k u) (lift n k v).
 Proof.
@@ -839,18 +852,11 @@ Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   Σ ;;; Γ ,,, Γ' |- M <= N ->
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
-  intros wfΣ. induction 1.
-  - econstructor.
-    + apply lift_leq_term; eassumption.
-    + eapply weakening_upto_domain; eassumption.
-  - eapply weakening_red1 in r; auto.
-    econstructor 2; eauto.
-  - eapply weakening_red1 in r; auto.
-    econstructor 3; eauto.
-  - eapply cumul_eta_l. 2: eauto.
-    eapply weakening_eta1. assumption.
-  - eapply cumul_eta_r. 1: eauto.
-    eapply weakening_eta1. assumption.
+  intros wfΣ.
+  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists (lift #|Γ''| #|Γ'| t'), (lift #|Γ''| #|Γ'| t''),
+  (lift #|Γ''| #|Γ'| u'), (lift #|Γ''| #|Γ'| u''); repeat split;
+  eauto using weakening_upto_domain, weakening_beta_eta, lift_leq_term.
 Qed.
 
 Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
@@ -1228,18 +1234,11 @@ Lemma weakening_conv `{cf:checker_flags} :
     Σ ;;; Γ ,,, Γ' |- M = N ->
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
 Proof.
-  intros Σ Γ Γ' Γ'' M N wfΣ. induction 1.
-  - econstructor.
-    + apply lift_eq_term; eassumption.
-    + now eapply weakening_upto_domain.
-  - eapply weakening_red1 in r ; auto.
-    econstructor 2 ; eauto.
-  - eapply weakening_red1 in r ; auto.
-    econstructor 3 ; eauto.
-  - eapply conv_eta_l. 2: eassumption.
-    eapply weakening_eta1. assumption.
-  - eapply conv_eta_r. 1: eassumption.
-    eapply weakening_eta1. assumption.
+  intros Σ Γ Γ' Γ'' M N wfΣ.
+  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists (lift #|Γ''| #|Γ'| t'), (lift #|Γ''| #|Γ'| t''),
+  (lift #|Γ''| #|Γ'| u'), (lift #|Γ''| #|Γ'| u''); repeat split;
+  eauto using weakening_upto_domain, weakening_beta_eta, lift_eq_term.
 Qed.
 
 Lemma weaken_wf_local {cf:checker_flags} {Σ Γ } Δ : 

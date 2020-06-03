@@ -22,131 +22,7 @@ Proof.
   intros H l. induction l; constructor; auto.
 Qed.
 
-Instance clos_refl_trans_refl {A} (R : relation A) : Reflexive (clos_refl_trans R).
-Proof. constructor 2. Defined.
-
-Instance clos_refl_trans_trans {A} (R : relation A)
-  : Transitive (clos_refl_trans R).
-Proof. econstructor 3; eassumption. Defined.
-
 (** ** η-confluence ** **)
-
-Ltac eta := match goal with
-            | |- _ × _ => split
-            | _ => idtac 
-            end; auto with eta.
-
-Lemma lift_lift_inv0' n k M N :
-  lift0 1 M = lift n (S k) N
-  -> ∑ M', M = lift n k M' /\ N = lift0 1 M'.
-Proof.
-  intro X; destruct (lift_lift_inv0 _ _ _ _ X) as [M' e].
-  exists M'. split; tas. rewrite e in X.
-  apply (lift_inj 1 0); rewrite X.
- rewrite (permute_lift M' n k 1 0); f_equal; lia.
-Qed.
-
-Lemma eta1_strengthening n k M N' :
-  eta1 (lift n k M) N'
-  -> ∑ N, eta1 M N × N' = lift n k N.
-Proof.
-  induction M in k, N' |- * using term_forall_list_ind; cbn;
-    intro XX; invs XX.
-  - enough (∑ l'', OnOne2 eta1 l l'' × l' = map (lift n k) l'') as XX. {
-      destruct XX as [l'' [? ?]]; subst. exists (tEvar n0 l''); eta. }
-    induction X in l', X0 |- *; cbn in *; invs X0.
-    + apply p in X1 as [v [? ?]]; subst. 
-      exists (v :: l); eta. now constructor.
-    + apply IHX in X1 as [l'' [? ?]]; subst.
-      exists (x :: l''); eta. now constructor.
-  - apply IHM1 in X as [N [? ?]]; subst.
-    exists (tProd n0 N M2); eta.
-  - apply IHM2 in X as [N [? ?]]; subst.
-    exists (tProd n0 M1 N); eta.
-  - destruct M2; invs H2.
-    destruct M2_2; invs H1.
-    apply lift_lift_inv0' in H0 as [? [? ?]]; subst.
-    assert (n1 = 0); [|subst n1]. {
-      destruct (S k <=? n1); lia. }
-    exists x; eta.
-  - apply IHM1 in X as [N [? ?]]; subst.
-    exists (tLambda n0 N M2); eta.
-  - apply IHM2 in X as [N [? ?]]; subst.
-    exists (tLambda n0 M1 N); eta.
-  - apply IHM1 in X as [N [? ?]]; subst.
-    exists (tLetIn n0 N M2 M3); eta.
-  - apply IHM2 in X as [N [? ?]]; subst.
-    exists (tLetIn n0 M1 N M3); eta.
-  - apply IHM3 in X as [N [? ?]]; subst.
-    exists (tLetIn n0 M1 M2 N); eta.
-  - apply IHM1 in X as [N [? ?]]; subst.
-    exists (tApp N M2); eta.
-  - apply IHM2 in X as [N [? ?]]; subst.
-    exists (tApp M1 N); eta.
-  - apply IHM1 in X0 as [N [? ?]]; subst.
-    exists (tCase p N M2 l); eta.
-  - apply IHM2 in X0 as [N [? ?]]; subst.
-    exists (tCase p M1 N l); eta.
-  - enough (∑ l'', OnOne2 (on_Trel_eq eta1 snd fst) l l''
-                   × brs' = map (on_snd (lift n k)) l'') as XX. {
-      destruct XX as [l'' [? ?]]; subst. exists (tCase p M1 M2 l''); eta. }
-    induction X in brs', X0 |- *; cbn in *; invs X0.
-    + destruct X1 as [X1 ?], x, hd'; cbn in *.
-      apply p0 in X1 as [v [? ?]]; subst. 
-      exists ((n1, v) :: l); eta. now constructor.
-    + apply IHX in X1 as [l'' [? ?]]; subst.
-      exists (x :: l''); eta. now constructor.
-  - apply IHM in X as [N [? ?]]; subst.
-    exists (tProj s N); eta.
-  - enough (∑ l'', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
-             × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) m l''
-             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
-      destruct XX as [l'' [? ?]]; subst. exists (tFix l'' n0); eta.
-      now rewrite (OnOne2_length o). }
-    set (K := #|m|) in *; clearbody K.
-    induction X in mfix1, X0 |- *; invs X0; cbn in *.
-    + destruct X1 as [X1 ?], x, hd'; cbn in *.
-      apply p in X1 as [v [? ?]]; subst. invs e.
-      exists ((mkdef _ dname0 v dbody rarg0) :: l); eta. now constructor.
-    + apply IHX in X1 as [l'' [? ?]]; subst.
-      exists (x :: l''); eta. now constructor.
-  - enough (∑ l'', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
-             × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) m l''
-             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
-      destruct XX as [l'' [? ?]]; subst. exists (tFix l'' n0); eta.
-      now rewrite (OnOne2_length o). }
-    set (K := #|m|) in *; clearbody K.
-    induction X in mfix1, X0 |- *; invs X0; cbn in *.
-    + destruct X1 as [X1 ?], x, hd'; cbn in *.
-      apply p in X1 as [v [? ?]]; subst. invs e.
-      exists ((mkdef _ dname0 dtype v rarg0) :: l); eta. now constructor.
-    + apply IHX in X1 as [l'' [? ?]]; subst.
-      exists (x :: l''); eta. now constructor.
-  - enough (∑ l'', OnOne2 (fun x y => eta1 (dtype x) (dtype y)
-             × (dname x, dbody x, rarg x) = (dname y, dbody y, rarg y)) m l''
-             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
-      destruct XX as [l'' [? ?]]; subst. exists (tCoFix l'' n0); eta.
-      now rewrite (OnOne2_length o). }
-    set (K := #|m|) in *; clearbody K.
-    induction X in mfix1, X0 |- *; invs X0; cbn in *.
-    + destruct X1 as [X1 ?], x, hd'; cbn in *.
-      apply p in X1 as [v [? ?]]; subst. invs e.
-      exists ((mkdef _ dname0 v dbody rarg0) :: l); eta. now constructor.
-    + apply IHX in X1 as [l'' [? ?]]; subst.
-      exists (x :: l''); eta. now constructor.
-  - enough (∑ l'', OnOne2 (fun x y => eta1 (dbody x) (dbody y)
-             × (dname x, dtype x, rarg x) = (dname y, dtype y, rarg y)) m l''
-             × mfix1 = map (map_def (lift n k) (lift n (#|m| + k))) l'') as XX. {
-      destruct XX as [l'' [? ?]]; subst. exists (tCoFix l'' n0); eta.
-      now rewrite (OnOne2_length o). }
-    set (K := #|m|) in *; clearbody K.
-    induction X in mfix1, X0 |- *; invs X0; cbn in *.
-    + destruct X1 as [X1 ?], x, hd'; cbn in *.
-      apply p in X1 as [v [? ?]]; subst. invs e.
-      exists ((mkdef _ dname0 dtype v rarg0) :: l); eta. now constructor.
-    + apply IHX in X1 as [l'' [? ?]]; subst.
-      exists (x :: l''); eta. now constructor.
-Qed.
 
 
 Lemma eta1_local_confluence t u1 u2 :
@@ -565,411 +441,10 @@ Qed.
 (*   - cbn. rewrite IHl. reflexivity. *)
 (* Qed. *)
 
-
 Hint Constructors red1 : beta.
 Hint Resolve red1_red refl_red red_trans : beta.
 Hint Resolve red_evar red_prod red_abs red_letin red_app
      red_case_p red_case_c red_proj_c : beta.
-
-Definition beta_eta1 Σ Γ := union (red1 Σ Γ) eta1.
-Definition beta_eta Σ Γ := clos_refl_trans (beta_eta1 Σ Γ).
-
-Create HintDb beta_eta.
-
-Tactic Notation "beta_eta" integer(n) :=
-  repeat match goal with
-         | |- _ × _ => split
-         end;
-  match goal with
-  | |- upto_domain _ _ => eauto n with utd
-  | _ => idtac
-  end;
-  eauto n with beta_eta.
-
-Tactic Notation "beta_eta" := beta_eta 5.
-Hint Constructors eta1 : beta_eta.
-Hint Constructors red1 : beta_eta.
-
-Definition beta_eta_refl Σ Γ x : beta_eta Σ Γ x x := clos_refl_trans_refl _ _.
-Hint Resolve beta_eta_refl : beta_eta.
-
-Definition beta_eta_trans Σ Γ x y z :
-  beta_eta Σ Γ x y -> beta_eta Σ Γ y z -> beta_eta Σ Γ x z
-  := clos_refl_trans_trans _ x y z.
-Hint Resolve beta_eta_trans : beta_eta.
-
-Lemma red_beta_eta Σ Γ M N :
-  red Σ Γ M N -> beta_eta Σ Γ M N.
-Proof.
-  induction 1; [reflexivity|]. etransitivity; tea.
-  constructor. now left.
-Defined.
-Hint Resolve red_beta_eta : beta_eta.
-
-Lemma eta_beta_eta Σ Γ M N :
-  eta M N -> beta_eta Σ Γ M N.
-Proof.
-  induction 1; try reflexivity.
-  - constructor. now right.
-  - etransitivity; tea.
-Defined.
-Hint Resolve eta_beta_eta : beta_eta.
-
-Hint Resolve eta1_eta : beta_eta.
-Hint Resolve red1_red : beta_eta.
-
-Lemma red1_beta_eta Σ Γ M N :
-  red1 Σ Γ M N -> beta_eta Σ Γ M N.
-Proof. beta_eta. Defined.
-
-Lemma eta1_beta_eta Σ Γ M N :
-  eta1 M N -> beta_eta Σ Γ M N.
-Proof. beta_eta. Defined.
-
-Lemma beta_eta_Evar Σ Γ n l l' :
-  All2 (beta_eta Σ Γ) l l' ->
-  beta_eta Σ Γ (tEvar n l) (tEvar n l').
-Proof.
-  intro X.
-  enough (forall l0, beta_eta Σ Γ (tEvar n (l0 ++ l)) (tEvar n (l0 ++ l'))) as XX;
-    [apply (XX [])|].
-  induction X; auto with beta_eta.
-  intro l0; transitivity (tEvar n (l0 ++ y :: l)); beta_eta.
-  - clear -r.
-    induction r; [econstructor 1|econstructor 2|econstructor 3]; beta_eta.
-    destruct r; [left|right]; constructor; apply OnOne2_app; now constructor.
-  - now rewrite (app_cons l0 l), (app_cons l0 l').
-Defined.
-Hint Resolve beta_eta_Evar : beta_eta.
-
-Lemma beta_eta_Prod Σ Γ na M M' N N' :
-  beta_eta Σ Γ M M' ->
-  beta_eta Σ (Γ ,, vass na M') N N' ->
-  beta_eta Σ Γ (tProd na M N) (tProd na M' N').
-Proof.
-  intros X Y; transitivity (tProd na M' N).
-  - clear Y. induction X; beta_eta.
-    destruct r; beta_eta.
-  - clear X. induction Y; beta_eta.
-    destruct r; beta_eta.
-Defined.
-Hint Resolve beta_eta_Prod : beta_eta.
-
-Lemma beta_eta_Lambda Σ Γ na M M' N N' :
-  beta_eta Σ Γ M M' ->
-  beta_eta Σ (Γ ,, vass na M') N N' ->
-  beta_eta Σ Γ (tLambda na M N) (tLambda na M' N').
-Proof.
-  intros X Y; transitivity (tLambda na M' N).
-  - clear Y. induction X; beta_eta.
-    destruct r; beta_eta.
-  - clear X. induction Y; beta_eta.
-    destruct r; beta_eta.
-Defined.
-Hint Resolve beta_eta_Lambda : beta_eta.
-
-Lemma beta_eta_LetIn Σ Γ na d0 d1 t0 t1 b0 b1 :
-  beta_eta Σ Γ d0 d1 -> beta_eta Σ Γ t0 t1 -> beta_eta Σ (Γ ,, vdef na d1 t1) b0 b1 ->
-  beta_eta Σ Γ (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1).
-Proof.
-  intros X Y Z;
-    transitivity (tLetIn na d1 t0 b0); [|transitivity (tLetIn na d1 t1 b0)].
-  - clear Y Z. induction X; beta_eta.
-    destruct r; beta_eta.
-  - clear X Z. induction Y; beta_eta.
-    destruct r; beta_eta.
-  - clear X Y. induction Z; beta_eta.
-    destruct r; beta_eta.
-Defined.
-Hint Resolve beta_eta_LetIn : beta_eta.
-
-Lemma beta_eta_App Σ Γ M M' N N' :
-  beta_eta Σ Γ M M' ->
-  beta_eta Σ Γ N N' ->
-  beta_eta Σ Γ (tApp M N) (tApp M' N').
-Proof.
-  intros X Y; transitivity (tApp M' N).
-  - clear Y. induction X; beta_eta.
-    destruct r; beta_eta.
-  - clear X. induction Y; beta_eta.
-    destruct r; beta_eta.
-Defined.
-Hint Resolve beta_eta_App : beta_eta.
-
-Lemma beta_eta_Case Σ Γ indn p c brs p' c' brs' :
-  beta_eta Σ Γ p p' ->
-  beta_eta Σ Γ c c' ->
-  All2 (on_Trel_eq (beta_eta Σ Γ) snd fst) brs brs' ->
-  beta_eta Σ Γ (tCase indn p c brs) (tCase indn p' c' brs').
-Proof.
-  intros X Y Z.
-  transitivity (tCase indn p' c brs). {
-    induction X; beta_eta. destruct r; beta_eta. }
-  transitivity (tCase indn p' c' brs). {
-    induction Y; beta_eta. destruct r; beta_eta. }
-  clear -Z.
-  enough (forall brs0, beta_eta Σ Γ (tCase indn p' c'  (brs0 ++ brs))
-                               (tCase indn p' c'  (brs0 ++ brs'))) as XX;
-    [apply (XX [])|].
-  induction Z; beta_eta.
-  destruct x as [n ?], y as [n0 ?], r as [r ?]; cbn in *; subst.
-  intro brs0.
-  transitivity (tCase indn p' c' (brs0 ++ (n0, t0) :: l)); beta_eta.
-  - induction r; [econstructor 1| | ]; beta_eta.
-    destruct r; [left|right];
-    constructor; apply OnOne2_app; now constructor.
-  - now rewrite (app_cons brs0 l), (app_cons brs0 l').
-Defined.
-Hint Resolve beta_eta_Case : beta_eta.
-
-Lemma beta_eta_Case0 Σ Γ indn p c brs p' c' :
-  beta_eta Σ Γ p p' ->
-  beta_eta Σ Γ c c' ->
-  beta_eta Σ Γ (tCase indn p c brs) (tCase indn p' c' brs).
-Proof.
-  intros; apply beta_eta_Case; tea.
-  apply All2_refl. split; reflexivity.
-Defined.
-Hint Resolve beta_eta_Case0 : beta_eta.
-
-Lemma beta_eta_Proj Σ Γ p t0 t1 :
-  beta_eta Σ Γ t0 t1 ->
-  beta_eta Σ Γ (tProj p t0) (tProj p t1).
-Proof.
-  induction 1; beta_eta. destruct r; beta_eta.
-Defined.
-Hint Resolve beta_eta_Proj : beta_eta.
-
-
-Lemma beta_eta_Fix_ty mfix mfix' idx Σ Γ :
-  All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
-                  × dbody d0 = dbody d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1) mfix mfix' ->
-  beta_eta Σ Γ (tFix mfix idx) (tFix mfix' idx).
-Proof.
-  intro XX.
-  assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  (beta_eta1 Σ Γ (dtype d0) (dtype d1))
-                  × dbody d0 = dbody d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
-    induction XX; [reflexivity|].
-    transitivity (y :: l).
-    - rdestruct r. destruct x, y; cbn in *; subst.
-      induction r.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption.
-    - clear XX. induction IHXX.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption. }
-  induction YY; beta_eta.
-  assert (((OnOne2 (on_Trel_eq (red1 Σ Γ) dtype
-                      (fun x0 => (dname x0, dbody x0, rarg x0)))) x y)
-          + ((OnOne2 (on_Trel_eq eta1 dtype
-                        (fun x0 => (dname x0, dbody x0, rarg x0)))) x y)) as ZZ. {
-    induction r.
-    - destruct p as [[] ?]; [left|right]; constructor; now split.
-    - destruct IHr; [left|right]; now constructor.
-  }
-  destruct ZZ; beta_eta.
-Qed.
-
-Lemma beta_eta_Fix_bo mfix mfix' idx Σ Γ :
-  All2 (fun d0 d1 => beta_eta Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-                  × dtype d0 = dtype d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1) mfix mfix' ->
-  beta_eta Σ Γ (tFix mfix idx) (tFix mfix' idx).
-Proof.
-  intro XX.
-  assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  beta_eta1 Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-                  × dtype d0 = dtype d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
-    set (Γ' := Γ ,,, fix_context mfix) in *; clearbody Γ'.
-    induction XX; [reflexivity|].
-    transitivity (y :: l).
-    - rdestruct r. destruct x, y; cbn in *; subst.
-      induction r.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption.
-    - clear XX. induction IHXX.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption. }
-  generalize_eq Γ' (fix_context mfix).
-  dependent induction YY; trea.
-  2: { intro e; etransitivity; eauto. apply IHYY2.
-       rewrite e. clear -YY1. induction YY1; [|easy..].
-       apply (f_equal (@rev _)). unfold mapi.
-       generalize 0 at 2 4 as k.
-       induction r; intro k; simpl.
-       + rdest. congruence.
-       + now rewrite IHr. }
-  assert (((OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, Γ')) dbody
-                      (fun x0 => (dname x0, dtype x0, rarg x0)))) x y)
-          + ((OnOne2 (on_Trel_eq eta1 dbody
-                        (fun x0 => (dname x0, dtype x0, rarg x0)))) x y)) as ZZ. {
-    induction r.
-    - destruct p as [[] ?]; [left|right]; constructor; now split.
-    - destruct IHr; [left|right]; now constructor.
-  }
-  intro; subst; destruct ZZ; beta_eta.
-Qed.
-
-Lemma beta_eta_Fix mfix mfix' idx Σ Γ :
-  All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
-                  × beta_eta Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1) mfix mfix' ->
-  beta_eta Σ Γ (tFix mfix idx) (tFix mfix' idx).
-Proof.
-  intro h.
-  assert (∑ mfixi, All2 (fun d0 d1 =>
-     beta_eta Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-     × dtype d0 = dtype d1 × dname d0 = dname d1 × rarg d0 = rarg d1) mfix mfixi
-                 × All2 (fun d0 d1 =>
-     beta_eta Σ Γ (dtype d0) (dtype d1)
-     × dbody d0 = dbody d1 × dname d0 = dname d1 × rarg d0 = rarg d1) mfixi mfix'
-         ) as [mfixi [h1 h2]].
-  { revert h. generalize (Γ ,,, fix_context mfix). intros Δ h.
-    induction h.
-    - exists []. auto.
-    - destruct r as [? [? e]]. inversion e.
-      destruct IHh as [mfixi [? ?]].
-      eexists (mkdef _ _ _ _ _ :: mfixi). split.
-      + constructor ; auto. simpl. split ; eauto.
-      + constructor ; auto. }
-  etransitivity.
-  - eapply beta_eta_Fix_bo. eassumption.
-  - eapply beta_eta_Fix_ty. assumption.
-Qed.
-Hint Resolve beta_eta_Fix_ty beta_eta_Fix_bo beta_eta_Fix : beta_eta.
-
-
-Lemma beta_eta_CoFix_ty mfix mfix' idx Σ Γ :
-  All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
-                  × dbody d0 = dbody d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1) mfix mfix' ->
-  beta_eta Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-Proof.
-  intro XX.
-  assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                  (beta_eta1 Σ Γ (dtype d0) (dtype d1))
-                  × dbody d0 = dbody d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
-    induction XX; [reflexivity|].
-    transitivity (y :: l).
-    - rdestruct r. destruct x, y; cbn in *; subst.
-      induction r.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption.
-    - clear XX. induction IHXX.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption. }
-  induction YY; beta_eta.
-  assert (((OnOne2 (on_Trel_eq (red1 Σ Γ) dtype
-                      (fun x0 => (dname x0, dbody x0, rarg x0)))) x y)
-          + ((OnOne2 (on_Trel_eq eta1 dtype
-                        (fun x0 => (dname x0, dbody x0, rarg x0)))) x y)) as ZZ. {
-    induction r.
-    - destruct p as [[] ?]; [left|right]; constructor; now split.
-    - destruct IHr; [left|right]; now constructor.
-  }
-  destruct ZZ; beta_eta.
-Qed.
-
-Lemma beta_eta_CoFix_bo mfix mfix' idx Σ Γ :
-  All2 (fun d0 d1 => beta_eta Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-                  × dtype d0 = dtype d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1) mfix mfix' ->
-  beta_eta Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-Proof.
-  intro XX.
-  assert (clos_refl_trans (OnOne2 (fun d0 d1 =>
-                 beta_eta1 Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-                  × dtype d0 = dtype d1
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1)) mfix mfix') as YY; [|clear XX]. {
-    set (Γ' := Γ ,,, fix_context mfix) in *; clearbody Γ'.
-    induction XX; [reflexivity|].
-    transitivity (y :: l).
-    - rdestruct r. destruct x, y; cbn in *; subst.
-      induction r.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption.
-    - clear XX. induction IHXX.
-      + constructor. now constructor.
-      + reflexivity.
-      + etransitivity; eassumption. }
-  generalize_eq Γ' (fix_context mfix).
-  dependent induction YY; trea.
-  2: { intro e; etransitivity; eauto. apply IHYY2.
-       rewrite e. clear -YY1. induction YY1; [|easy..].
-       apply (f_equal (@rev _)). unfold mapi.
-       generalize 0 at 2 4 as k.
-       induction r; intro k; simpl.
-       + rdest. congruence.
-       + now rewrite IHr. }
-  assert (((OnOne2 (on_Trel_eq (red1 Σ (Γ ,,, Γ')) dbody
-                      (fun x0 => (dname x0, dtype x0, rarg x0)))) x y)
-          + ((OnOne2 (on_Trel_eq eta1 dbody
-                        (fun x0 => (dname x0, dtype x0, rarg x0)))) x y)) as ZZ. {
-    induction r.
-    - destruct p as [[] ?]; [left|right]; constructor; now split.
-    - destruct IHr; [left|right]; now constructor.
-  }
-  intro; subst; destruct ZZ; beta_eta.
-Qed.
-
-Lemma beta_eta_CoFix mfix mfix' idx Σ Γ :
-  All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
-                  × beta_eta Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-                  × dname d0 = dname d1
-                  × rarg d0 = rarg d1) mfix mfix' ->
-  beta_eta Σ Γ (tCoFix mfix idx) (tCoFix mfix' idx).
-Proof.
-  intro h.
-  assert (∑ mfixi, All2 (fun d0 d1 =>
-     beta_eta Σ (Γ ,,, fix_context mfix) (dbody d0) (dbody d1)
-     × dtype d0 = dtype d1 × dname d0 = dname d1 × rarg d0 = rarg d1) mfix mfixi
-                 × All2 (fun d0 d1 =>
-     beta_eta Σ Γ (dtype d0) (dtype d1)
-     × dbody d0 = dbody d1 × dname d0 = dname d1 × rarg d0 = rarg d1) mfixi mfix'
-         ) as [mfixi [h1 h2]].
-  { revert h. generalize (Γ ,,, fix_context mfix). intros Δ h.
-    induction h.
-    - exists []. auto.
-    - destruct r as [? [? e]]. inversion e.
-      destruct IHh as [mfixi [? ?]].
-      eexists (mkdef _ _ _ _ _ :: mfixi). split.
-      + constructor ; auto. simpl. split ; eauto.
-      + constructor ; auto. }
-  etransitivity.
-  - eapply beta_eta_CoFix_bo. eassumption.
-  - eapply beta_eta_CoFix_ty. assumption.
-Qed.
-Hint Resolve beta_eta_CoFix_ty beta_eta_CoFix_bo beta_eta_CoFix : beta_eta.
-
-Lemma beta_eta_mkApps Σ Γ M M' l l' :
-  beta_eta Σ Γ M M' -> All2 (beta_eta Σ Γ) l l' ->
-  beta_eta Σ Γ (mkApps M l) (mkApps M' l').
-Proof.
-  intros X Y.
-  induction Y in M, M', X |- * ; cbn; beta_eta.
-Qed.
-Hint Resolve beta_eta_mkApps : beta_eta.
 
 
 Lemma red1_App_Lambda_Rel0 Σ Γ na M N :
@@ -1420,8 +895,10 @@ Qed.
 Lemma red_upto_types {Σ Γ Γ' t t'} :
   upto_types Γ Γ' -> red Σ Γ t t' -> red Σ Γ' t t'.
 Proof.
-  intros e X; induction X in Γ', e |- *; econstructor;
-    try eapply IHX; eauto using red1_upto_types.
+  intros e X; induction X in Γ', e |- *.
+  - constructor; eauto using red1_upto_types.
+  - reflexivity.
+  - etransitivity; [eapply IHX1|eapply IHX2]; assumption.
 Qed.
 
 Lemma beta_eta_upto_types {Σ Γ Γ' t t'} :
@@ -2218,6 +1695,640 @@ Lemma beta_eta_confluence {cf:checker_flags} {Σ Γ t u v} :
   wf Σ -> beta_eta Σ Γ t u -> beta_eta Σ Γ t v ->
   ∑ u' v', beta_eta Σ Γ u u' × beta_eta Σ Γ v v' × upto_domain u' v'.
 Admitted.
+
+Require Import ssreflect.
+Require Import PCUICSize PCUICParallelReductionConfluence PCUICUnivSubst.
+
+Ltac nowright := let t' := fresh in let X := fresh in
+                 right; intros t' X; destruct t'; invs X; trea; eauto.
+
+Ltac nowleft t := left; exists t; cbn; split; [utd|try lia].
+
+Definition inv_lift_upto_domain n k (t : term)
+  : (∑ t', upto_domain t (lift n k t') × size t' <= size t)
+    + (forall t', upto_domain t (lift n k t') -> False).
+Proof.
+  induction t using term_forall_list_ind in k |- *.
+  - destruct (le_lt_dec k (n0 - n)).
+    + destruct (le_lt_dec n n0).
+      * nowleft (tRel (n0 - n)).
+        destruct (leb_spec_Set k (n0 - n)); [|lia].
+        now replace (n + (n0 - n)) with n0 by lia.
+      * nowright. destruct (leb_spec_Set k n1); lia.
+    + destruct (le_lt_dec k n0).
+      * nowright. destruct (leb_spec_Set k n1); lia.
+      * nowleft (tRel n0).
+        now destruct (leb_spec_Set k n0); [lia|].
+  - nowleft (tVar i).
+  - admit.
+  - nowleft (tSort s).
+  - specialize (IHt1 k) as [[t1' [? ?]]|?]; [|nowright].
+    specialize (IHt2 (S k)) as [[t2' [? ?]]|?]; [|nowright].
+    nowleft (tProd n0 t1' t2').
+  - specialize (IHt2 (S k)) as [[t2' [? ?]]|?]; [|nowright].
+    left. specialize (IHt1 k) as [[t1' [? ?]]|?].
+    + exists (tLambda n0 t1' t2'); split; cbn; utd; lia.
+    + exists (tLambda n0 (tSort Universe.type0m) t2'); split; cbn; utd.
+      assert (size t1 > 0) by (destruct t1; cbn; lia). lia.
+  - specialize (IHt1 k) as [[t1' [? ?]]|?]; [|nowright].
+    specialize (IHt2 k) as [[t2' [? ?]]|?]; [|nowright].
+    specialize (IHt3 (S k)) as [[t3' [? ?]]|?]; [|nowright].
+    nowleft (tLetIn n0 t1' t2' t3').
+  - specialize (IHt1 k) as [[t1' [? ?]]|?]; [|nowright].
+    specialize (IHt2 k) as [[t2' [? ?]]|?]; [|nowright].
+    nowleft (tApp t1' t2').
+  - nowleft (tConst s u).
+  - nowleft (tInd i u).
+  - nowleft (tConstruct i n0 u).
+  - admit.
+  - specialize (IHt k) as [[t' [? ?]]|?]; [|nowright].
+    nowleft (tProj s t').
+Admitted.
+
+
+Section ParallelReduction.
+  Context (Σ : global_env).
+
+  Inductive pred1 (Γ Γ' : context) : term -> term -> Type :=
+  (** Reductions *)
+  (** Eta *)
+  | pred_eta na A t0 t1 :
+      pred1 Γ Γ' t0 t1 ->
+      pred1 Γ Γ' (eta_redex na A t0) t1
+
+  (** Beta *)
+  | pred_beta na t0 t1 b0 b1 a0 a1 :
+      pred1 Γ Γ' t0 t1 ->
+      pred1 (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 -> pred1 Γ Γ' a0 a1 ->
+      pred1 Γ Γ' (tApp (tLambda na t0 b0) a0) (subst10 a1 b1)
+
+  (** Let *)
+  | pred_zeta na d0 d1 t0 t1 b0 b1 :
+      pred1 Γ Γ' t0 t1 ->
+      pred1 Γ Γ' d0 d1 -> pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
+      pred1 Γ Γ' (tLetIn na d0 t0 b0) (subst10 d1 b1)
+
+  (** Local variables *)
+  | pred_rel_def_unfold i body :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      option_map decl_body (nth_error Γ' i) = Some (Some body) ->
+      pred1 Γ Γ' (tRel i) (lift0 (S i) body)
+
+  | pred_rel_refl i :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1 Γ Γ' (tRel i)  (tRel i)
+
+  (** Case *)
+  | pred_iota ind pars c u args0 args1 p brs0 brs1 :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2 (pred1 Γ Γ') args0 args1 ->
+      All2 (on_Trel_eq (pred1 Γ Γ') snd fst) brs0 brs1 ->
+      pred1 Γ Γ' (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0)
+            (iota_red pars c args1 brs1)
+
+  (** Fix unfolding, with guard *)
+  | pred_fix mfix0 mfix1 idx args0 args1 narg fn :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                    dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+      unfold_fix mfix1 idx = Some (narg, fn) ->
+      is_constructor narg args0 = true ->
+      All2 (pred1 Γ Γ') args0 args1 ->
+      pred1 Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)
+
+  (** CoFix-case unfolding *)
+  | pred_cofix_case ip p0 p1 mfix0 mfix1 idx args0 args1 narg fn brs0 brs1 :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                    dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+      unfold_cofix mfix1 idx = Some (narg, fn) ->
+      All2 (pred1 Γ Γ') args0 args1 ->
+      pred1 Γ Γ' p0 p1 ->
+      All2 (on_Trel_eq (pred1 Γ Γ') snd fst) brs0 brs1 ->
+      pred1 Γ Γ' (tCase ip p0 (mkApps (tCoFix mfix0 idx) args0) brs0)
+            (tCase ip p1 (mkApps fn args1) brs1)
+
+  (** CoFix-proj unfolding *)
+  | pred_cofix_proj p mfix0 mfix1 idx args0 args1 narg fn :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                    dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+      unfold_cofix mfix1 idx = Some (narg, fn) ->
+      All2 (pred1 Γ Γ') args0 args1 ->
+      pred1 Γ Γ' (tProj p (mkApps (tCoFix mfix0 idx) args0))
+            (tProj p (mkApps fn args1))
+
+  (** Constant unfolding *)
+
+  | pred_delta c decl body (isdecl : declared_constant Σ c decl) u :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      decl.(cst_body) = Some body ->
+      pred1 Γ Γ' (tConst c u) (subst_instance_constr u body)
+
+  | pred_const c u :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred1 Γ Γ' (tConst c u) (tConst c u)
+
+  (** Proj *)
+  | pred_proj i pars narg k u args0 args1 arg1 :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2 (pred1 Γ Γ') args0 args1 ->
+      nth_error args1 (pars + narg) = Some arg1 ->
+      pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1
+
+  (** Congruences *)
+  | pred_abs na M M' N N' : pred1 Γ Γ' M M' -> pred1 (Γ ,, vass na M) (Γ' ,, vass na M') N N' ->
+                            pred1 Γ Γ' (tLambda na M N) (tLambda na M' N')
+  | pred_app M0 M1 N0 N1 :
+      pred1 Γ Γ' M0 M1 ->
+      pred1 Γ Γ' N0 N1 ->
+      pred1 Γ Γ' (tApp M0 N0) (tApp M1 N1)
+            (* do not handle mkApps yet *)
+
+  | pred_letin na d0 d1 t0 t1 b0 b1 :
+      pred1 Γ Γ' d0 d1 -> pred1 Γ Γ' t0 t1 -> pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
+      pred1 Γ Γ' (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)
+
+  | pred_case ind p0 p1 c0 c1 brs0 brs1 :
+      pred1 Γ Γ' p0 p1 ->
+      pred1 Γ Γ' c0 c1 ->
+      All2 (on_Trel_eq (pred1 Γ Γ') snd fst) brs0 brs1 ->
+      pred1 Γ Γ' (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)
+
+  | pred_proj_congr p c c' :
+      pred1 Γ Γ' c c' -> pred1 Γ Γ' (tProj p c) (tProj p c')
+
+  | pred_fix_congr mfix0 mfix1 idx :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                    dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+      pred1 Γ Γ' (tFix mfix0 idx) (tFix mfix1 idx)
+
+  | pred_cofix_congr mfix0 mfix1 idx :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+      All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                    dtype dbody (fun x => (dname x, rarg x)) pred1 mfix0 mfix1 ->
+      pred1 Γ Γ' (tCoFix mfix0 idx) (tCoFix mfix1 idx)
+
+  | pred_prod na M0 M1 N0 N1 : pred1 Γ Γ' M0 M1 -> pred1 (Γ ,, vass na M0) (Γ' ,, vass na M1) N0 N1 ->
+                               pred1 Γ Γ' (tProd na M0 N0) (tProd na M1 N1)
+
+  | evar_pred ev l l' :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      All2 (pred1 Γ Γ') l l' -> pred1 Γ Γ' (tEvar ev l) (tEvar ev l')
+
+  | pred_atom_refl t :
+      All2_local_env (on_decl pred1) Γ Γ' ->
+      pred_atom t -> pred1 Γ Γ' t t.
+
+  Notation pred1_ctx Γ Γ' := (All2_local_env (on_decl pred1) Γ Γ').
+
+  Lemma pred1_ind_all_ctx
+        (P : forall (Γ Γ' : context) (t t0 : term), Type)
+        (Pctx : forall (Γ Γ' : context), Type) :
+      let P' Γ Γ' x y := pred1 Γ Γ' x y × P Γ Γ' x y in
+      (forall Γ Γ', All2_local_env (on_decl pred1) Γ Γ' -> All2_local_env (on_decl P) Γ Γ' -> Pctx Γ Γ') ->
+      (forall (Γ Γ' : context) (na : name) (A t0 t1 : term),
+          pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
+          P Γ Γ' (eta_redex na A t0) t1) ->
+      (forall (Γ Γ' : context) (na : name) (t0 t1 b0 b1 a0 a1 : term),
+          pred1 (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 -> P (Γ ,, vass na t0) (Γ' ,, vass na t1) b0 b1 ->
+          pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
+          pred1 Γ Γ' a0 a1 -> P Γ Γ' a0 a1 -> P Γ Γ' (tApp (tLambda na t0 b0) a0) (b1 {0 := a1})) ->
+      (forall (Γ Γ' : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+          pred1 Γ Γ' t0 t1 -> P Γ Γ' t0 t1 ->
+          pred1 Γ Γ' d0 d1 -> P Γ Γ' d0 d1 ->
+          pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
+          P (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 -> P Γ Γ' (tLetIn na d0 t0 b0) (b1 {0 := d1})) ->
+      (forall (Γ Γ' : context) (i : nat) (body : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          option_map decl_body (nth_error Γ' i) = Some (Some body) ->
+          P Γ Γ' (tRel i) (lift0 (S i) body)) ->
+      (forall (Γ Γ' : context) (i : nat),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          P Γ Γ' (tRel i) (tRel i)) ->
+      (forall (Γ Γ' : context) (ind : inductive) (pars c : nat) (u : Instance.t) (args0 args1 : list term)
+              (p : term) (brs0 brs1 : list (nat * term)),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2 (P' Γ Γ') args0 args1 ->
+          All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
+          P Γ Γ' (tCase (ind, pars) p (mkApps (tConstruct ind c u) args0) brs0) (iota_red pars c args1 brs1)) ->
+      (forall (Γ Γ' : context) (mfix0 mfix1 : mfixpoint term) (idx : nat) (args0 args1 : list term) (narg : nat) (fn : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
+                        (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          unfold_fix mfix1 idx = Some (narg, fn) ->
+          is_constructor narg args0 = true ->
+          All2 (P' Γ Γ') args0 args1 ->
+          P Γ Γ' (mkApps (tFix mfix0 idx) args0) (mkApps fn args1)) ->
+      (forall (Γ Γ' : context) (ip : inductive * nat) (p0 p1 : term) (mfix0 mfix1 : mfixpoint term) (idx : nat)
+              (args0 args1 : list term) (narg : nat) (fn : term) (brs0 brs1 : list (nat * term)),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
+                        (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          unfold_cofix mfix1 idx = Some (narg, fn) ->
+          All2 (P' Γ Γ') args0 args1 ->
+          pred1 Γ Γ' p0 p1 ->
+          P Γ Γ' p0 p1 ->
+          All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
+          P Γ Γ' (tCase ip p0 (mkApps (tCoFix mfix0 idx) args0) brs0) (tCase ip p1 (mkApps fn args1) brs1)) ->
+      (forall (Γ Γ' : context) (p : projection) (mfix0 mfix1 : mfixpoint term)
+         (idx : nat) (args0 args1 : list term)
+         (narg : nat) (fn : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody
+                        (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          unfold_cofix mfix1 idx = Some (narg, fn) ->
+          All2 (P' Γ Γ') args0 args1 ->
+          P Γ Γ' (tProj p (mkApps (tCoFix mfix0 idx) args0)) (tProj p (mkApps fn args1))) ->
+      (forall (Γ Γ' : context) c (decl : constant_body) (body : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          declared_constant Σ c decl ->
+          forall u : Instance.t, cst_body decl = Some body ->
+                                        P Γ Γ' (tConst c u) (subst_instance_constr u body)) ->
+      (forall (Γ Γ' : context) c (u : Instance.t),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          P Γ Γ' (tConst c u) (tConst c u)) ->
+      (forall (Γ Γ' : context) (i : inductive) (pars narg : nat) (k : nat) (u : Instance.t)
+              (args0 args1 : list term) (arg1 : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2 (pred1 Γ Γ') args0 args1 ->
+          All2 (P Γ Γ') args0 args1 ->
+          nth_error args1 (pars + narg) = Some arg1 ->
+          P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
+      (forall (Γ Γ' : context) (na : name) (M M' N N' : term),
+          pred1 Γ Γ' M M' ->
+          P Γ Γ' M M' -> pred1 (Γ,, vass na M) (Γ' ,, vass na M') N N' ->
+          P (Γ,, vass na M) (Γ' ,, vass na M') N N' -> P Γ Γ' (tLambda na M N) (tLambda na M' N')) ->
+      (forall (Γ Γ' : context) (M0 M1 N0 N1 : term),
+          pred1 Γ Γ' M0 M1 -> P Γ Γ' M0 M1 -> pred1 Γ Γ' N0 N1 ->
+          P Γ Γ' N0 N1 -> P Γ Γ' (tApp M0 N0) (tApp M1 N1)) ->
+      (forall (Γ Γ' : context) (na : name) (d0 d1 t0 t1 b0 b1 : term),
+          pred1 Γ Γ' d0 d1 ->
+          P Γ Γ' d0 d1 ->
+          pred1 Γ Γ' t0 t1 ->
+          P Γ Γ' t0 t1 ->
+          pred1 (Γ,, vdef na d0 t0) (Γ',,vdef na d1 t1) b0 b1 ->
+          P (Γ,, vdef na d0 t0) (Γ',,vdef na d1 t1) b0 b1 -> P Γ Γ' (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)) ->
+      (forall (Γ Γ' : context) (ind : inductive * nat) (p0 p1 c0 c1 : term) (brs0 brs1 : list (nat * term)),
+          pred1 Γ Γ' p0 p1 ->
+          P Γ Γ' p0 p1 ->
+          pred1 Γ Γ' c0 c1 ->
+          P Γ Γ' c0 c1 -> All2_prop_eq Γ Γ' snd fst P' brs0 brs1 ->
+          P Γ Γ' (tCase ind p0 c0 brs0) (tCase ind p1 c1 brs1)) ->
+      (forall (Γ Γ' : context) (p : projection) (c c' : term), pred1 Γ Γ' c c' -> P Γ Γ' c c' -> P Γ Γ' (tProj p c) (tProj p c')) ->
+
+      (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1)
+                        dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          P Γ Γ' (tFix mfix0 idx) (tFix mfix1 idx)) ->
+
+      (forall (Γ Γ' : context) (mfix0 : mfixpoint term) (mfix1 : list (def term)) (idx : nat),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2_local_env (on_decl (on_decl_over pred1 Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_local_env (on_decl (on_decl_over P Γ Γ')) (fix_context mfix0) (fix_context mfix1) ->
+          All2_prop2_eq Γ Γ' (Γ ,,, fix_context mfix0) (Γ' ,,, fix_context mfix1) dtype dbody (fun x => (dname x, rarg x)) P' mfix0 mfix1 ->
+          P Γ Γ' (tCoFix mfix0 idx) (tCoFix mfix1 idx)) ->
+      (forall (Γ Γ' : context) (na : name) (M0 M1 N0 N1 : term),
+          pred1 Γ Γ' M0 M1 ->
+          P Γ Γ' M0 M1 -> pred1 (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 ->
+          P (Γ,, vass na M0) (Γ' ,, vass na M1) N0 N1 -> P Γ Γ' (tProd na M0 N0) (tProd na M1 N1)) ->
+      (forall (Γ Γ' : context) (ev : nat) (l l' : list term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          All2 (P' Γ Γ') l l' -> P Γ Γ' (tEvar ev l) (tEvar ev l')) ->
+      (forall (Γ Γ' : context) (t : term),
+          All2_local_env (on_decl pred1) Γ Γ' ->
+          Pctx Γ Γ' ->
+          pred_atom t -> P Γ Γ' t t) ->
+      forall (Γ Γ' : context) (t t0 : term), pred1 Γ Γ' t t0 -> P Γ Γ' t t0.
+  Proof.
+    intros P' Hctx Xη X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14 X15 X16
+           X17 X18 X19.
+    fix aux 5. intros Γ Γ' t t'.
+    move aux at top.
+    destruct 1; match goal with
+                | |- P _ _ (tFix _ _) (tFix _ _) => idtac
+                | |- P _ _ (tCoFix _ _) (tCoFix _ _) => idtac
+                | |- P _ _ (mkApps (tFix _ _) _) _ => idtac
+                | |- P _ _ (tCase _ _ (mkApps (tCoFix _ _) _) _) _ => idtac
+                | |- P _ _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
+                | |- P _ _ (tRel _) _ => idtac
+                | |- P _ _ (tConst _ _) _ => idtac
+                | H : _ |- _ => eapply H; eauto
+                end.
+    - simpl. apply X1; auto. apply Hctx; tas.
+      apply (All2_local_env_impl a). intros. eapply (aux _ _ _ _ X20).
+    - simpl. apply X2; auto.
+      apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+    - apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 ((extendP aux) Γ Γ')).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) (g:=fst) a1 (extendP aux Γ Γ')).
+    - eapply X4; eauto.
+      + apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+      + eapply (All2_local_env_impl a0). intros. red. red in X20. apply (aux _ _ _ _ X20).
+      + eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+      + eapply (All2_All2_prop (P:=pred1) (Q:=P') a2 (extendP aux Γ Γ')).
+    - eapply X5; eauto.
+      + apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X21).
+      + eapply (All2_local_env_impl a0). intros. red. red in X21. apply (aux _ _ _ _ X21).
+      + eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+      + eapply (All2_All2_prop (P:=pred1) (Q:=P') a2 (extendP aux Γ Γ')).
+      + eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a3 (extendP aux Γ Γ')).
+    - eapply X6; eauto.
+      + apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+      + eapply (All2_local_env_impl a0). intros. red. red in X20. apply (aux _ _ _ _ X20).
+      + eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+      + eapply (All2_All2_prop (P:=pred1) (Q:=P') a2 (extendP aux Γ Γ')).
+    - eapply X7; eauto.
+      apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+    - eapply X8; eauto.
+      apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+    - apply Hctx, (All2_local_env_impl a); try exact a. intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P) a0). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ Γ')).
+    - eapply X15.
+      + eapply (All2_local_env_impl a). intros. apply X20.
+      + eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+      + eapply (All2_local_env_impl a0). intros. red. exact X20.
+      + eapply (All2_local_env_impl a0). intros. red. apply (aux _ _ _ _ X20).
+      + eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+    - eapply X16.
+      + eapply (All2_local_env_impl a). intros. apply X20.
+      + eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+      + eapply (All2_local_env_impl a0). intros. red. exact X20.
+      + eapply (All2_local_env_impl a0). intros. red. apply (aux _ _ _ _ X20).
+      + eapply (All2_All2_prop2_eq (Q:=P') (f:=dtype) (g:=dbody) a1 (extendP aux)).
+    - eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+    - eapply (All2_All2_prop (P:=pred1) (Q:=P') a0 (extendP aux Γ Γ')).
+    - eapply (Hctx _ _ a), (All2_local_env_impl a). intros. apply (aux _ _ _ _ X20).
+  Defined.
+
+  Lemma pred1_refl_gen Γ Γ' t : pred1_ctx Γ Γ' -> pred1 Γ Γ' t t.
+  Proof.
+    revert Γ'.
+    unshelve einduction Γ, t using term_forall_ctx_list_ind;
+    intros;
+      try solve [(apply pred_atom; reflexivity) || constructor; auto];
+      try solve [try red in X; constructor; unfold All2_prop2_eq, All2_prop2, on_Trel in *; solve_all];
+      intros.
+    - constructor; eauto. eapply IHt0_2.
+      constructor; try red; eauto with pcuic.
+    - constructor; eauto. eapply IHt0_2.
+      constructor; try red; eauto with pcuic.
+    - constructor; eauto. eapply IHt0_3.
+      constructor; try red; eauto with pcuic.
+    - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ')))
+                             (fix_context m) (fix_context m)).
+      { revert X. clear -X1. generalize (fix_context m).
+        intros c H1. induction H1; constructor; auto.
+        - red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
+        - red in t1. red. split.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+      }
+      constructor; auto. red.
+      unfold All2_prop_eq, on_Trel in *.
+      eapply All_All2; eauto. simpl; intros.
+      split; eauto. { eapply X3; auto. }
+      split. { eapply X3. eapply All2_local_env_app_inv; auto. } auto.
+    - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ')))
+                             (fix_context m) (fix_context m)).
+      { revert X. clear -X1. generalize (fix_context m).
+        intros c H1. induction H1; constructor; auto.
+        - red in t0. red. eapply t0. eapply All2_local_env_app_inv; auto.
+        - red in t1. red. split.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+          + eapply t1. eapply All2_local_env_app_inv; auto.
+      }
+      constructor; auto. red.
+      eapply All_All2; eauto. simpl; intros.
+      split; eauto. { eapply X3; auto. }
+      split. { eapply X3. eapply All2_local_env_app_inv; auto. } auto.
+  Qed.
+
+  Lemma pred1_ctx_refl Γ : pred1_ctx Γ Γ.
+  Proof.
+    induction Γ.
+    - constructor.
+    - destruct a as [na [b|] ty]; constructor; try red; simpl; auto with pcuic.
+      + split; now apply pred1_refl_gen.
+      + apply pred1_refl_gen, IHΓ.
+  Qed.
+
+  Lemma pred1_refl Γ t : pred1 Γ Γ t t.
+  Proof. apply pred1_refl_gen, pred1_ctx_refl. Qed.
+
+  Lemma pred1_pred1_ctx {Γ Δ t u} : pred1 Γ Δ t u -> pred1_ctx Γ Δ.
+  Proof.
+    intros H; revert Γ Δ t u H.
+    refine (pred1_ind_all_ctx _ (fun Γ Γ' => pred1_ctx Γ Γ') _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
+    all:try intros **;
+      try solve [specialize (forall_Γ _ X3); eauto]; eauto;
+        try solve [eexists; split; constructor; eauto].
+  Qed.
+
+  Lemma pred1_ctx_over_refl Γ Δ : All2_local_env (on_decl (on_decl_over pred1 Γ Γ)) Δ Δ.
+  Proof.
+    induction Δ as [|[na [b|] ty] Δ]; constructor; auto.
+    - red. split; red; apply pred1_refl.
+    - red. apply pred1_refl.
+  Qed.
+
+End ParallelReduction.
+
+
+
+Section Rho.
+  Context {cf : checker_flags}.
+  Context (Σ : global_env).
+  Context (wfΣ : wf Σ).
+
+  Equations? rho (Γ : context) (t : term) : term by wf (size t) := 
+  rho Γ (tApp t u) with view_lambda_fix_app t u := 
+    { | fix_lambda_app_lambda na T b [] u' := 
+        (rho (vass na (rho Γ T) :: Γ) b) {0 := rho Γ u'};
+      | fix_lambda_app_lambda na T b (a :: l) u' :=
+        mkApps ((rho (vass na (rho Γ T) :: Γ) b) {0 := rho Γ a})
+          (map_terms rho Γ (l ++ [u']) _);
+      | fix_lambda_app_fix mfix idx l a :=
+        let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
+        let mfix' := map_fix_rho (t:=tFix mfix idx) (fun Γ x Hx => rho Γ x) Γ mfixctx mfix _ in
+        let args := map_terms rho Γ (l ++ [a]) _ in
+        match unfold_fix mfix' idx with 
+        | Some (rarg, fn) =>
+          if is_constructor rarg (l ++ [a]) then
+            mkApps fn args
+          else mkApps (tFix mfix' idx) args
+        | None => mkApps (tFix mfix' idx) args
+        end ;
+      | fix_lambda_app_other t' u' nisfixlam := tApp (rho Γ t') (rho Γ u') } ; 
+  rho Γ (tLetIn na d t b) => (subst10 (rho Γ d) (rho (vdef na (rho Γ d) (rho Γ t) :: Γ) b)); 
+  rho Γ (tRel i) with option_map decl_body (nth_error Γ i) := { 
+    | Some (Some body) => (lift0 (S i) body); 
+    | Some None => tRel i; 
+    | None => tRel i }; 
+
+  rho Γ (tCase (ind, pars) p x brs) with inspect (decompose_app x) :=
+  { | exist (f, args) eqx with view_construct_cofix f := 
+  { | construct_cofix_construct ind' c u with eq_inductive ind ind' := 
+    { | true => 
+        let p' := rho Γ p in 
+        let args' := map_terms rho Γ args _ in 
+        let brs' := map_brs rho Γ brs _ in 
+        iota_red pars c args' brs'; 
+      | false => 
+        let p' := rho Γ p in 
+        let x' := rho Γ x in 
+        let brs' := map_brs rho Γ brs _ in 
+        tCase (ind, pars) p' x' brs' }; 
+    | construct_cofix_cofix mfix idx :=
+      let p' := rho Γ p in 
+      let args' := map_terms rho Γ args _ in 
+      let brs' := map_brs rho Γ brs _ in 
+      let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
+      let mfix' := map_fix_rho (t:=tCase (ind, pars) p x brs) rho Γ mfixctx mfix _ in
+        match nth_error mfix' idx with
+        | Some d =>
+          tCase (ind, pars) p' (mkApps (subst0 (cofix_subst mfix') (dbody d)) args') brs'
+        | None => tCase (ind, pars) p' (rho Γ x) brs'
+        end; 
+    | construct_cofix_other t nconscof => 
+      let p' := rho Γ p in 
+      let x' := rho Γ x in 
+      let brs' := map_brs rho Γ brs _ in 
+        tCase (ind, pars) p' x' brs' } };
+
+  rho Γ (tProj (i, pars, narg) x) with inspect (decompose_app x) := {
+    | exist (f, args) eqx with view_construct_cofix f :=
+    | construct_cofix_construct ind c u with inspect (nth_error (map_terms rho Γ args _) (pars + narg)) := { 
+      | exist (Some arg1) eq => 
+        if eq_inductive i ind then arg1
+        else tProj (i, pars, narg) (rho Γ x);
+      | exist None neq => tProj (i, pars, narg) (rho Γ x) }; 
+    | construct_cofix_cofix mfix idx := 
+      let args' := map_terms rho Γ args _ in
+      let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
+      let mfix' := map_fix_rho (t:=tProj (i, pars, narg) x) rho Γ mfixctx mfix _ in
+      match nth_error mfix' idx with
+      | Some d => tProj (i, pars, narg) (mkApps (subst0 (cofix_subst mfix') (dbody d)) args')
+      | None =>  tProj (i, pars, narg) (rho Γ x)
+      end;
+    | construct_cofix_other t nconscof => tProj (i, pars, narg) (rho Γ x) } ;
+  rho Γ (tConst c u) with lookup_env Σ c := { 
+    | Some (ConstantDecl decl) with decl.(cst_body) := { 
+      | Some body => subst_instance_constr u body; 
+      | None => tConst c u }; 
+    | _ => tConst c u }; 
+  rho Γ (tLambda na T (tApp t (tRel 0))) with inv_lift_upto_domain 1 0 t := {
+    | inl (t'; _) => rho Γ t';
+    | inr _ => tLambda na (rho Γ T) (rho (vass na (rho Γ T) :: Γ) (tApp t (tRel 0))) }; 
+  rho Γ (tLambda na t u) => tLambda na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u); 
+  rho Γ (tProd na t u) => tProd na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u); 
+  rho Γ (tVar i) => tVar i; 
+  rho Γ (tEvar n l) => tEvar n (map_terms rho Γ l _); 
+  rho Γ (tSort s) => tSort s; 
+  rho Γ (tFix mfix idx) => 
+    let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
+    tFix (map_fix_rho (t:=tFix mfix idx) (fun Γ x Hx => rho Γ x) Γ mfixctx mfix _) idx; 
+  rho Γ (tCoFix mfix idx) => 
+    let mfixctx := fold_fix_context_wf mfix (fun Γ x Hx => rho Γ x) Γ [] in 
+    tCoFix (map_fix_rho (t:=tCoFix mfix idx) rho Γ mfixctx mfix _) idx; 
+  rho Γ x => x.
+  Proof.
+    all:try abstract lia.
+    - abstract (rewrite size_mkApps ?list_size_app /=; lia).
+    - simpl in Hx. abstract (rewrite size_mkApps /=; lia).
+    - clear; abstract (rewrite list_size_app size_mkApps /=; lia).
+    - clear; abstract (rewrite size_mkApps /=; lia).
+    - clear; abstract (rewrite size_mkApps /=; lia).
+    - clear; abstract (rewrite size_mkApps /=; lia).
+    - clear; abstract (rewrite list_size_app size_mkApps /=; lia).
+    - clear -eqx; eapply symmetry, decompose_app_inv in eqx. subst x. 
+      abstract (rewrite size_mkApps /=; lia).
+    - clear; abstract (lia).
+    - clear -eqx; eapply symmetry, decompose_app_inv in eqx. subst x. 
+      abstract (rewrite size_mkApps /=; lia).
+    - clear. abstract lia.      
+    - clear -eqx Hx. eapply symmetry, decompose_app_inv in eqx; subst x0.
+      abstract (rewrite size_mkApps /=; lia).
+    - clear -eqx. eapply symmetry, decompose_app_inv in eqx; subst x.
+      abstract (rewrite size_mkApps /=; lia).
+    - clear -eqx. eapply symmetry, decompose_app_inv in eqx; subst x.
+      abstract (rewrite size_mkApps /=; lia).
+    - clear -eqx. eapply symmetry, decompose_app_inv in eqx; subst x.
+      abstract (rewrite size_mkApps /=; lia).
+    - clear -eqx. eapply symmetry, decompose_app_inv in eqx; subst x.
+      abstract (rewrite size_mkApps /=; lia).
+    - clear -eqx Hx. eapply symmetry, decompose_app_inv in eqx; subst x0.
+      abstract (rewrite size_mkApps /=; lia).
+    - clear -eqx. eapply symmetry, decompose_app_inv in eqx; subst x.
+      abstract (rewrite size_mkApps /=; lia). 
+  Defined.
+
+
+  Section rho_ctx.
+    Context (Δ : context).
+    Fixpoint rho_ctx_over Γ :=
+      match Γ with
+      | [] => []
+      | {| decl_name := na; decl_body := None; decl_type := T |} :: Γ =>
+        let Γ' := rho_ctx_over Γ in
+        vass na (rho (Δ ,,, Γ') T) :: Γ'
+      | {| decl_name := na; decl_body := Some b; decl_type := T |} :: Γ =>
+        let Γ' := rho_ctx_over Γ in
+        vdef na (rho (Δ ,,, Γ') b) (rho (Δ ,,, Γ') T) :: Γ'
+      end.
+  End rho_ctx.
+
+  Definition rho_ctx Γ := (rho_ctx_over [] Γ).
+
+
+  Lemma triangle Γ Δ t u :
+  let Pctx :=
+      fun (Γ Δ : context) => pred1_ctx Σ Δ (rho_ctx Γ) in
+  pred1 Σ Γ Δ t u -> pred1 Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t).
+  Proof with solve_discr.
+    intros Pctx H. revert Γ Δ t u H.
+    refine (pred1_ind_all_ctx Σ _ Pctx
+                              _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+      subst Pctx; intros *.
+    all:try intros **; rename_all_hyps.
+
+    - simpl. induction X0; simpl; depelim predΓ'; constructor; rewrite ?app_context_nil_l; eauto.
+      all:simpl NoConfusion in *; noconf H; noconf H0; auto.
+
+    - intros X X0; cbn.
+      induction X0; simpl; depelim X; constructor; rewrite ?app_context_nil_l; eauto.
+      all:simpl Classes.NoConfusion in *; noconf H; noconf H0; auto.
+
+
+  
 
 
 (* Lemma eta_postponment {cf:checker_flags} Σ (HΣ : wf Σ) Γ u v w *)

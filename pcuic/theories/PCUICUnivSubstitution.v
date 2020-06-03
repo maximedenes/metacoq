@@ -1033,6 +1033,16 @@ Proof.
     Grab Existential Variables. all:repeat econstructor.
 Qed.
 
+Lemma red_subst_instance Σ Γ u s t :
+  red Σ Γ s t ->
+  red Σ (subst_instance_context u Γ)
+       (subst_instance_constr u s) (subst_instance_constr u t).
+Proof.
+  induction 1; [constructor 1|econstructor 2|econstructor 3];
+    eauto using red1_subst_instance.
+Defined.
+
+
 Fixpoint subst_instance_stack l π :=
   match π with
   | ε => ε
@@ -1105,7 +1115,7 @@ Proof.
     rewrite map_app. cbn. reflexivity.
 Qed.
 
-Lemma eta1_subst_instance_constr l u v :
+Lemma eta1_subst_instance l u v :
   eta1 u v ->
   eta1 (subst_instance_constr l u) (subst_instance_constr l v).
 Proof.
@@ -1141,13 +1151,32 @@ Proof.
     inversion e1; congruence.
 Defined.
 
-Lemma eta_subst_instance_constr l u v :
+Lemma eta_subst_instance l u v :
   eta u v ->
   eta (subst_instance_constr l u) (subst_instance_constr l v).
 Proof.
   induction 1; [constructor 1|econstructor 2|econstructor 3];
-    eauto using eta1_subst_instance_constr.
+    eauto using eta1_subst_instance.
 Defined.
+
+Lemma beta_eta1_subst_instance Σ Γ u s t :
+  beta_eta1 Σ Γ s t ->
+  beta_eta1 Σ (subst_instance_context u Γ)
+       (subst_instance_constr u s) (subst_instance_constr u t).
+Proof.
+  destruct 1; [left; now eapply red1_subst_instance
+              |right; now apply eta1_subst_instance].
+Defined.
+
+Lemma beta_eta_subst_instance Σ Γ u s t :
+  beta_eta Σ Γ s t ->
+  beta_eta Σ (subst_instance_context u Γ)
+       (subst_instance_constr u s) (subst_instance_constr u t).
+Proof.
+  induction 1; [constructor 1|econstructor 2|econstructor 3];
+    eauto using beta_eta1_subst_instance.
+Defined.
+
 
 Lemma upto_domain_subst_instance t v :
   upto_domain t v ->
@@ -1165,16 +1194,12 @@ Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   (Σ.1,univs) ;;; subst_instance_context u Γ
                    |- subst_instance_constr u A <= subst_instance_constr u B.
 Proof.
-  intros Hu HH X0. induction X0.
-  - econstructor.
-    + eapply leq_term_subst_instance; tea.
-    + now apply upto_domain_subst_instance.
-  - econstructor 2. 1: eapply red1_subst_instance; cbn; eauto. eauto.
-  - econstructor 3. 1: eauto. eapply red1_subst_instance; cbn; eauto.
-  - eapply cumul_eta_l. 2: eauto.
-    eapply eta1_subst_instance_constr. assumption.
-  - eapply cumul_eta_r. 1: eauto.
-    eapply eta1_subst_instance_constr. assumption.
+  intros Hu HH (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  exists (subst_instance_constr u t'), (subst_instance_constr u t''),
+  (subst_instance_constr u u'), (subst_instance_constr u u'');
+    repeat split; try now apply upto_domain_subst_instance.
+  2: eapply leq_term_subst_instance; tea.
+  all: now apply beta_eta_subst_instance.
 Qed.
 
 Global Instance eq_decl_subst_instance : SubstUnivPreserved eq_decl.
