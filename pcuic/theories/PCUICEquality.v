@@ -1462,16 +1462,16 @@ Inductive upto_domain : term -> term -> Type :=
     upto_domain t t' ->
     upto_domain (tLambda na ty t) (tLambda na' ty' t')
 
-| utd_Prod na na' a a' b b' :
+| utd_Prod na a a' b b' :
     upto_domain a a' ->
     upto_domain b b' ->
-    upto_domain (tProd na a b) (tProd na' a' b')
+    upto_domain (tProd na a b) (tProd na a' b')
 
-| utd_LetIn na na' t t' ty ty' u u' :
+| utd_LetIn na t t' ty ty' u u' :
     upto_domain t t' ->
     upto_domain ty ty' ->
     upto_domain u u' ->
-    upto_domain (tLetIn na t ty u) (tLetIn na' t' ty' u')
+    upto_domain (tLetIn na t ty u) (tLetIn na t' ty' u')
 
 | utd_Case indn p p' c c' brs brs' :
     upto_domain p p' ->

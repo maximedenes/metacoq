@@ -507,8 +507,17 @@ Section ParallelReduction.
       pred1 Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1
 
   (** Congruences *)
-  | pred_abs na M M' N N' : pred1 Γ Γ' M M' -> pred1 (Γ ,, vass na M) (Γ' ,, vass na M') N N' ->
-                            pred1 Γ Γ' (tLambda na M N) (tLambda na M' N')
+  | pred_abs_noeta na M M' N N' :
+      eta_reduce = false ->
+      pred1 Γ Γ' M M' ->
+      pred1 (Γ ,, vass na M) (Γ' ,, vass na M') N N' ->
+      pred1 Γ Γ' (tLambda na M N) (tLambda na M' N')
+
+  | pred_abs_eta na na' M M' N N' :
+      eta_reduce ->
+      pred1 (Γ ,, vass na M) (Γ' ,, vass na' M') N N' ->
+      pred1 Γ Γ' (tLambda na M N) (tLambda na' M' N')
+
   | pred_app M0 M1 N0 N1 :
       pred1 Γ Γ' M0 M1 ->
       pred1 Γ Γ' N0 N1 ->
@@ -516,7 +525,9 @@ Section ParallelReduction.
             (* do not handle mkApps yet *)
 
   | pred_letin na d0 d1 t0 t1 b0 b1 :
-      pred1 Γ Γ' d0 d1 -> pred1 Γ Γ' t0 t1 -> pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
+      pred1 Γ Γ' d0 d1 ->
+      pred1 Γ Γ' t0 t1 ->
+      pred1 (Γ ,, vdef na d0 t0) (Γ' ,, vdef na d1 t1) b0 b1 ->
       pred1 Γ Γ' (tLetIn na d0 t0 b0) (tLetIn na d1 t1 b1)
 
   | pred_case ind p0 p1 c0 c1 brs0 brs1 :
@@ -659,9 +670,14 @@ Section ParallelReduction.
           nth_error args1 (pars + narg) = Some arg1 ->
           P Γ Γ' (tProj (i, pars, narg) (mkApps (tConstruct i k u) args0)) arg1) ->
       (forall (Γ Γ' : context) (na : name) (M M' N N' : term),
+          eta_reduce = false ->
           pred1 Γ Γ' M M' ->
           P Γ Γ' M M' -> pred1 (Γ,, vass na M) (Γ' ,, vass na M') N N' ->
           P (Γ,, vass na M) (Γ' ,, vass na M') N N' -> P Γ Γ' (tLambda na M N) (tLambda na M' N')) ->
+      (forall (Γ Γ' : context) (na na' : name) (M M' N N' : term),
+          eta_reduce ->
+          pred1 (Γ,, vass na M) (Γ' ,, vass na' M') N N' ->
+          P (Γ,, vass na M) (Γ' ,, vass na' M') N N' -> P Γ Γ' (tLambda na M N) (tLambda na' M' N')) ->
       (forall (Γ Γ' : context) (M0 M1 N0 N1 : term),
           pred1 Γ Γ' M0 M1 -> P Γ Γ' M0 M1 -> pred1 Γ Γ' N0 N1 ->
           P Γ Γ' N0 N1 -> P Γ Γ' (tApp M0 N0) (tApp M1 N1)) ->
@@ -710,7 +726,7 @@ Section ParallelReduction.
           pred_atom t -> P Γ Γ' t t) ->
       forall (Γ Γ' : context) (t t0 : term), pred1 Γ Γ' t t0 -> P Γ Γ' t t0.
   Proof.
-    intros P Pctx P' Hctx Xη X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X11 X12 X13 X14
+    intros P Pctx P' Hctx Xη X X0 X1 X2 X3 X4 X5 X6 X7 X8 X9 X10 X10' X11 X12 X13 X14
            X15 X16 X17 X18 X19.
     fix aux 5. intros Γ Γ' t t'.
     move aux at top.
@@ -722,6 +738,7 @@ Section ParallelReduction.
                 | |- P _ _ (tProj _ (mkApps (tCoFix _ _) _)) _ => idtac
                 | |- P _ _ (tRel _) _ => idtac
                 | |- P _ _ (tConst _ _) _ => idtac
+                | |- P _ _ (tLambda _ _ _) (tLambda _ _ _) => idtac
                 | H : _ |- _ => eapply H; eauto
                 end.
     - simpl. apply X1; auto. apply Hctx.
@@ -754,6 +771,8 @@ Section ParallelReduction.
       apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
     - apply Hctx, (All2_local_env_impl a). exact a. intros. apply (aux _ _ _ _ X20).
     - eapply (All2_All2_prop (P:=pred1) (Q:=P) a0). intros. apply (aux _ _ _ _ X20).
+    - eauto.
+    - eauto.
     - eapply (All2_All2_prop_eq (P:=pred1) (Q:=P') (f:=snd) a (extendP aux Γ Γ')).
     - eapply X15.
       eapply (All2_local_env_impl a). intros. apply X20.
@@ -782,8 +801,11 @@ Section ParallelReduction.
       intros.
     - constructor; eauto. eapply IHt0_2.
       constructor; try red; eauto with pcuic.
-    - constructor; eauto. eapply IHt0_2.
-      constructor; try red; eauto with pcuic.
+    - case_eq eta_reduce; intro ee.
+      + eapply pred_abs_eta; tas. apply IHt0_2.
+        constructor; cbn; eauto.
+      + eapply pred_abs_noeta; eauto. apply IHt0_2.
+        constructor; cbn; eauto.
     - constructor; eauto. eapply IHt0_3.
       constructor; try red; eauto with pcuic.
     - assert (All2_local_env (on_decl (fun Δ Δ' : context => pred1 (Γ0 ,,, Δ) (Γ' ,,, Δ')))
@@ -829,10 +851,11 @@ Section ParallelReduction.
   Lemma pred1_pred1_ctx {Γ Δ t u} : pred1 Γ Δ t u -> pred1_ctx Γ Δ.
   Proof.
     intros H; revert Γ Δ t u H.
-    refine (pred1_ind_all_ctx _ (fun Γ Γ' => pred1_ctx Γ Γ') _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
+    refine (pred1_ind_all_ctx _ (fun Γ Γ' => pred1_ctx Γ Γ') _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
         try solve [eexists; split; constructor; eauto].
+    now invs X0.
   Qed.
 
   Lemma pred1_ctx_over_refl Γ Δ : All2_local_env (on_decl (on_decl_over pred1 Γ Γ)) Δ Δ.
@@ -1037,7 +1060,7 @@ Section ParallelWeakening.
              All2_local_env_over (pred1 re Σ) Γ Δ Γ'' Δ'' ->
              pred1_ctx re Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (Δ ,,, Δ'' ,,, lift_context #|Δ''| 0 Δ')).
 
-      refine (pred1_ind_all_ctx re Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
+      refine (pred1_ind_all_ctx re Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; intros; subst Pctx;
         rename_all_hyps; try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
       match goal with
         |- context [iota_red _ _ _ _] => idtac
@@ -1220,6 +1243,10 @@ Section ParallelWeakening.
     - specialize (forall_Γ0 Γ0 (_ ,, _) eq_refl _ (_ ,, _) eq_refl heq_length _ _ X3).
       rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ0.
       econstructor; eauto.
+    - apply pred_abs_eta; tas.
+      specialize (forall_Γ Γ0 (_ ,, _) eq_refl _ (_ ,, _) eq_refl
+                           heq_length _ _ X1).
+      rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ; eauto.
 
     - specialize (forall_Γ1 Γ0 (_ ,, _) eq_refl _ (_ ,, _) eq_refl heq_length _ _ X5).
       rewrite !lift_context_snoc0 !Nat.add_0_r in forall_Γ1.
@@ -1511,7 +1538,7 @@ Section ParallelSubstitution.
                 #|Γ| = #|Γ1| ->
                All2_local_env_over (pred1 re Σ) Γ Γ1 Δ Δ1 ->
                pred1_ctx re Σ (Γ ,,, subst_context s 0 Γ') (Γ1 ,,, subst_context s' 0 Γ'1)).
-    refine (pred1_ind_all_ctx re Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; !intros;
+    refine (pred1_ind_all_ctx re Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); intros *; !intros;
       try subst Γ Γ'; simplify_IH_hyps; cbn -[iota_red];
       match goal with
         |- context [iota_red _ _ _ _] => idtac
@@ -1749,6 +1776,10 @@ Section ParallelSubstitution.
     - specialize (forall_Γ0 _ _ (_ ,, _) eq_refl _ _ (_ ,, _)
                            _ _ Hs eq_refl heq_length (f_equal S heq_length0) HΔ).
       rewrite !subst_context_snoc0 in forall_Γ0.
+      econstructor; eauto.
+    - specialize (forall_Γ _ _ (_ ,, _) eq_refl _ _ (_ ,, _)
+                           _ _ Hs eq_refl heq_length (f_equal S heq_length0) HΔ).
+      rewrite !subst_context_snoc0 in forall_Γ.
       econstructor; eauto.
 
     - specialize (forall_Γ1 _ _ (_ ,, _) eq_refl _ _ (_ ,, _)

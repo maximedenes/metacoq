@@ -801,13 +801,13 @@ Hint Rewrite smash_context_length : len.
 
 (* Sigma calculus*)
 
-Lemma shiftn_ext n f f' : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
+Lemma shiftn_ext {n f f'} : (forall i, f i = f' i) -> forall t, shiftn n f t = shiftn n f' t.
 Proof.
   intros.
   unfold shiftn. destruct Nat.ltb; congruence.
 Qed.
 
-Lemma rename_ext f f' : (forall i, f i = f' i) -> (forall t, rename f t = rename f' t).
+Lemma rename_ext {f f'} : (forall i, f i = f' i) -> (forall t, rename f t = rename f' t).
 Proof.
   intros. revert f f' H.
   elim t0 using term_forall_list_ind; simpl in |- *; intros; try easy ;

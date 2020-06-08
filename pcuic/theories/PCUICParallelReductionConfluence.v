@@ -625,7 +625,14 @@ Proof.
       * nowleft (tRel n0).
         now destruct (leb_spec_Set k n0); [lia|].
   - nowleft (tVar i).
-  - admit.
+  - induction X; [nowleft (tEvar n0 [])|].
+    specialize (p k) as [[t'' [? ?]]|HH].
+    2:{ nowright. destruct l0; invs X0. eauto. }
+    destruct IHX as [[t' [? ?]]|HH].
+    2:{ nowright. destruct l1; invs X0.
+        apply (HH (tEvar n1 l1)); utd. }
+    destruct t'; invs u0.
+    cbn in l1. nowleft (tEvar n1 (t'' :: l2)).
   - nowleft (tSort s).
   - specialize (IHt1 k) as [[t1' [? ?]]|?]; [|nowright].
     specialize (IHt2 (S k)) as [[t2' [? ?]]|?]; [|nowright].
@@ -645,10 +652,79 @@ Proof.
   - nowleft (tConst s u).
   - nowleft (tInd i u).
   - nowleft (tConstruct i n0 u).
-  - admit.
+  - specialize (IHt1 k) as [[t1' [? ?]]|?]; [|nowright].
+    specialize (IHt2 k) as [[t2' [? ?]]|?]; [|nowright].
+    induction X; [nowleft (tCase p t1' t2' [])|].
+    specialize (p0 k) as [[t'' [? ?]]|HH].
+    2:{ nowright. destruct brs; invs X2. destruct X3. eauto. }
+    destruct IHX as [[t' [? ?]]|HH].
+    2:{ nowright. destruct brs; invs X2.
+        destruct X3.
+        eapply (HH (tCase indn H H1 _)); cbn; utd. }
+    destruct t'; invs u2.
+    cbn in l3. nowleft (tCase indn t'1 t'2 ((x.1, t'') :: brs)).
   - specialize (IHt k) as [[t' [? ?]]|?]; [|nowright].
     nowleft (tProj s t').
-Admitted.
+  - enough ((∑ l', All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y) × rarg x = rarg y)
+                      m (map (map_def (lift n k) (lift n (#|m| + k))) l')
+                   × mfixpoint_size size l' <= mfixpoint_size size m)
+            + forall l', All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y) × rarg x = rarg y)
+                      m (map (map_def (lift n k) (lift n (#|m| + k))) l') -> False)
+      as XX. {
+      destruct XX as [[l' [? ?]]|XX].
+      + apply All2_length in a as ee.
+        rewrite map_length in ee. rewrite ee in a.
+        nowleft (tFix l' n0).
+      + nowright.
+        apply All2_length in X0 as ee.
+        rewrite map_length in ee. rewrite <- ee in X0. eauto. }
+    set (#|m| + k) as k'; clearbody k'.
+    induction X.
+    + left. exists []. split; constructor.
+    + destruct p as [p1 p2].
+      specialize (p1 k) as [[ty' []]|?].
+      2:{ nowright. rdest. cbn in *. eauto. }
+      specialize (p2 k') as [[bo' []]|?].
+      2:{ nowright. rdest. cbn in *. eauto. }
+      destruct IHX as [[l' []]|?].
+      2:{ nowright. }
+      left. eexists ({| dtype := ty'; dbody := bo' |} :: l').
+      split; cbn.
+      * constructor; tas. cbn; repeat split; auto.
+      * destruct x; cbn in *. unfold mfixpoint_size in *; lia.
+  - enough ((∑ l', All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y) × rarg x = rarg y)
+                      m (map (map_def (lift n k) (lift n (#|m| + k))) l')
+                   × mfixpoint_size size l' <= mfixpoint_size size m)
+            + forall l', All2 (fun x y => upto_domain (dtype x) (dtype y)
+                      × upto_domain (dbody x) (dbody y) × rarg x = rarg y)
+                      m (map (map_def (lift n k) (lift n (#|m| + k))) l') -> False)
+      as XX. {
+      destruct XX as [[l' [? ?]]|XX].
+      + apply All2_length in a as ee.
+        rewrite map_length in ee. rewrite ee in a.
+        nowleft (tCoFix l' n0).
+      + nowright.
+        apply All2_length in X0 as ee.
+        rewrite map_length in ee. rewrite <- ee in X0. eauto. }
+    set (#|m| + k) as k'; clearbody k'.
+    induction X.
+    + left. exists []. split; constructor.
+    + destruct p as [p1 p2].
+      specialize (p1 k) as [[ty' []]|?].
+      2:{ nowright. rdest. cbn in *. eauto. }
+      specialize (p2 k') as [[bo' []]|?].
+      2:{ nowright. rdest. cbn in *. eauto. }
+      destruct IHX as [[l' []]|?].
+      2:{ nowright. }
+      left. eexists ({| dtype := ty'; dbody := bo' |} :: l').
+      split; cbn.
+      * constructor; tas. cbn; repeat split; auto.
+      * destruct x; cbn in *. unfold mfixpoint_size in *; lia.
+        Unshelve. all: constructor.
+Defined.
 
 
 Definition discr_eta_redex_view t :=
@@ -808,7 +884,7 @@ Section Rho.
   rho Γ (tLambda na T t) with view_eta_redex reduce_eta t := {
     | eta_redex_view1 Hre t t' Hutd Hsize => rho Γ t';
     | eta_redex_view2 Hre t => tLambda na (rho Γ T) (rho (vass na (rho Γ T) :: Γ) t);
-    | eta_redex_view3 Hre t Hdiscr => tLambda na (rho Γ T) (rho (vass na (rho Γ T) :: Γ) t) };
+    | eta_redex_view3 Hre t Hdiscr => tLambda nAnon (tSort Universe.type0m) (rho (vass nAnon (tSort Universe.type0m) :: Γ) t) };
   rho Γ (tProd na t u) => tProd na (rho Γ t) (rho (vass na (rho Γ t) :: Γ) u); 
   rho Γ (tVar i) => tVar i; 
   rho Γ (tEvar n l) => tEvar n (map_terms rho Γ l _); 
@@ -1563,6 +1639,189 @@ Section Rho.
     destruct t; simpl; try congruence.
   Qed.
 
+Require Import PCUICBasicStrengthening.
+
+  Lemma lift_inj_upto_domain n k t u :
+    upto_domain (lift n k t) (lift n k u) -> upto_domain t u.
+  Proof.
+    revert k u.
+    induction t using term_forall_list_ind; cbn;
+      intros k [] H; try discriminate; tas; cbn in H; invs H.
+    all: try constructor; eauto.
+    - rewrite (lift_inj n k (tRel n0) (tRel n1)); [|reflexivity].
+      cbn. now f_equal.
+    - apply All2_map_inv in X0. solve_all.
+    - apply All2_map_inv in X2; cbn in *. solve_all.
+    - apply All2_map_inv in X0; cbn in *.
+      pose proof X0 as XX.
+      rewrite (All2_length _ _ X0) in XX; clear X0.
+      solve_all.
+    - apply All2_map_inv in X0; cbn in *.
+      pose proof X0 as XX.
+      rewrite (All2_length _ _ X0) in XX; clear X0.
+      solve_all.
+  Qed.
+
+  Lemma rho_eta_upto_domain Γ t u :
+    reduce_eta ->
+    upto_domain t u ->
+    rho Γ t = rho Γ u.
+  Proof.
+    intro Hre. revert t Γ u.
+    refine (term_ind_size_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+      intros; invs_utd; trea.
+    - simp rho. f_equal. solve_all. induction X1; cbnr.
+      f_equal; tas. rdest. eauto.
+    - simp rho. f_equal; auto.
+      erewrite H; tea. auto.
+    - simp rho.
+      destruct (view_eta_redex reduce_eta t0)
+        as [Hre' t0 t0' Hutd Hsize|Hre' t0|Hre' t0 Hdiscr] eqn:ee; cbn in *.
+      2: exfalso; clear -Hre Hre'; rewrite Hre in Hre'; discriminate.
+      + destruct (view_eta_redex reduce_eta t')
+          as [Hre'' t1 t1' Hutd' Hsize'|Hre'' t1|Hre'' t1 Hdiscr'] eqn:ff; cbn in *.
+        2: exfalso; clear -Hre Hre''; rewrite Hre in Hre''; discriminate.
+        * eapply H. lia. eapply lift_inj_upto_domain.
+          etransitivity; tea. invs_utd. etransitivity; tea. now symmetry.
+        * invs_utd. exfalso; eapply Hdiscr'.
+          etransitivity; tea. now symmetry.
+      + destruct (view_eta_redex reduce_eta t')
+          as [Hre'' t1 t1' Hutd' Hsize'|Hre'' t1|Hre'' t1 Hdiscr'] eqn:ff; cbn in *.
+        2: exfalso; clear -Hre Hre''; rewrite Hre in Hre''; discriminate.
+        * invs_utd. exfalso; eapply Hdiscr.
+          etransitivity; tea.
+        * f_equal. eauto.
+    - simp rho. f_equal; auto.
+      erewrite H; tea. erewrite H0; tea. eauto.
+    - simp rho; eauto.
+      destruct (view_lambda_fix_app t u).
+      + sap upto_domain_mkApps_inv in X0.
+        destruct X0 as [x [? [? [u ?]]]].
+        destruct x; inversion u.
+        destruct (view_lambda_fix_app t' u'); subst.
+        * admit.
+        * exfalso. 
+          eapply mkApps_eq_inj in e as [XX ?]; [invs XX| |]; auto.
+        * exfalso. rewrite isFixLambda_app_mkApps' in i0; cbnr; discriminate.
+      + sap upto_domain_mkApps_inv in X0.
+        destruct X0 as [x [? [? [u ?]]]].
+        destruct x; inversion u.
+        destruct (view_lambda_fix_app t' u'); subst.
+        * exfalso. 
+          eapply mkApps_eq_inj in e as [XX ?]; [invs XX| |]; auto.
+        * admit.
+        * exfalso. rewrite isFixLambda_app_mkApps' in i; cbnr; discriminate.
+      + destruct (view_lambda_fix_app t' u').
+        * exfalso. apply upto_domain_mkApps_inv in X0.
+          destruct X0 as [x [? [? [u ?]]]].
+          destruct x; invs u.
+          rewrite isFixLambda_app_mkApps' in i; cbnr; discriminate.
+        * exfalso. apply upto_domain_mkApps_inv in X0.
+          destruct X0 as [x [? [? [u ?]]]].
+          destruct x; invs u.
+          rewrite isFixLambda_app_mkApps' in i; cbnr; discriminate.
+        * admit.
+    - admit.
+    - destruct s as [[? ?] ?]. simp rho. cbn. admit.
+    - simp rho. cbn. f_equal.
+  Admitted.
+
+
+(* todo clean All2 map *)
+Lemma All2_map_left' {A B C} (P : A -> C -> Type) l l' (f : B -> A) :
+  All2 P (map f l) l' -> All2 (fun x y => P (f x) y) l l'.
+Proof. intros. rewrite -(map_id l') in X. eapply All2_map_inv; eauto. Qed.
+
+
+
+  Lemma shiftn_shift {k k' r} :
+    shiftn k (shiftn k' r) =1 shiftn (k + k') r.
+  Proof.
+    intro n; unfold shiftn.
+      destruct (Nat.ltb_spec0 n k);
+      destruct (Nat.ltb_spec0 n (k + k'));
+      destruct (Nat.ltb_spec0 (n - k) k'); try lia.
+      rewrite Nat.add_assoc.
+      do 2 f_equal. lia.
+  Qed.
+
+  Lemma lift_rename_inv t u r k :
+    lift 1 k t = rename (shiftn (S k) r) u → ∑ u0, u = lift 1 k u0.
+  Proof.
+    induction t using term_forall_list_ind in u, r, k |- *; intro H.
+    all: destruct u; cbn in H; invs H.
+    - unfold shiftn in H1.
+      destruct (Nat.ltb_spec0 n0 (S k));
+        destruct (leb_spec_Set k n); try lia; subst.
+      + exists (tRel n0); cbn.
+        destruct (leb_spec_Set k n0); try lia; reflexivity.
+      + destruct n0; try lia.
+        eexists (tRel n0); cbn.
+        destruct (leb_spec_Set k n0); try lia; reflexivity.
+    - now exists (tVar i0).
+    - enough (∑ l', l0 = map (lift 1 k) l') as XX. {
+        destruct XX as [l' ?]. exists (tEvar n0 l'); cbn. congruence. }
+      induction X in l0, r, H2 |- *.
+      + exists []. destruct l0; [reflexivity|discriminate].
+      + destruct l0; [discriminate|]; cbn in *. invs H2.
+        eapply p in H0 as [x'' ?].
+        eapply IHX in H1 as [l'' ?].
+        exists (x'' :: l''). cbn. congruence.
+    - now exists (tSort u).
+    - edestruct IHt1; tea.
+      rewrite (rename_ext shiftn_shift) in H3.
+      edestruct IHt2; tea.
+      subst. eexists (tProd _ _ _); reflexivity.
+    - edestruct IHt1; tea.
+      rewrite (rename_ext shiftn_shift) in H3.
+      edestruct IHt2; tea.
+      subst. eexists (tLambda _ _ _); reflexivity.
+    - edestruct IHt1; tea.
+      edestruct IHt2; tea.
+      rewrite (rename_ext shiftn_shift) in H4.
+      edestruct IHt3; tea.
+      subst. eexists (tLetIn _ _ _ _); reflexivity.
+  Admitted.
+
+  Lemma lift_rename_inv_upto_domain t u r k :
+    upto_domain (lift 1 k t) (rename (shiftn (S k) r) u)
+    → ∑ u0, upto_domain u (lift 1 k u0).
+  Proof.
+    induction t using term_forall_list_ind in u, r, k |- *; intro H.
+    all: destruct u; cbn in H; invs H.
+    - unfold shiftn in H2.
+      destruct (Nat.ltb_spec0 n0 (S k));
+        destruct (leb_spec_Set k n); try lia; subst.
+      + exists (tRel n0); cbn.
+        destruct (leb_spec_Set k n0); try lia; reflexivity.
+      + destruct n0; try lia.
+        eexists (tRel n0); cbn.
+        destruct (leb_spec_Set k n0); try lia; reflexivity.
+    - now exists (tVar i0).
+    - enough (∑ l', All2 upto_domain l0 (map (lift 1 k) l')) as XX. {
+        destruct XX as [l' ?]. exists (tEvar n0 l'); cbn. now constructor. }
+      induction X in l0, r, X0 |- *.
+      + exists []. destruct l0; [constructor|invs X0].
+      + destruct l0; invs X0; cbn in *.
+        eapply p in X1 as [x'' ?].
+        eapply IHX in X2 as [l'' ?].
+        exists (x'' :: l''). cbn. now constructor.
+    - now exists (tSort u).
+    - edestruct IHt1; tea.
+      rewrite (rename_ext shiftn_shift) in X0.
+      edestruct IHt2; tea.
+      eexists (tProd _ _ _); cbn; utd.
+    - rewrite (rename_ext shiftn_shift) in X.
+      edestruct IHt2; tea.
+      eexists (tLambda _ _ _); cbn; utd.
+    - edestruct IHt1; tea.
+      edestruct IHt2; tea.
+      rewrite (rename_ext shiftn_shift) in X1.
+      edestruct IHt3; tea.
+      eexists (tLetIn _ _ _ _); cbn; utd.
+  Admitted.
+
+
   Lemma rho_rename Γ Δ r t :
     renaming Γ Δ r ->
     rename r (rho Γ t) = rho Δ (rename r t).
@@ -1605,10 +1864,11 @@ Section Rho.
             now apply upto_domain_rename. }
         invs Heqt1. erewrite H; tea; try lia.
         assert (upto_domain (rename r t0') t1') as XX. {
-          enough (upto_domain (lift0 1 (rename r t0')) (lift0 1 t1')) by admit.
+          enough (upto_domain (lift0 1 (rename r t0')) (lift0 1 t1'))
+            by now eapply lift_inj_upto_domain.
           etransitivity; tea.
           rewrite <- rename_shiftn. apply upto_domain_rename. now symmetry. }
-        admit.
+        eapply rho_eta_upto_domain; tea.
 
       + remember (rename (shiftn 1 r) t0) as t1.
         destruct (view_eta_redex reduce_eta t1)
@@ -1622,25 +1882,13 @@ Section Rho.
         destruct (view_eta_redex reduce_eta t1)
           as [Hre' t1 t1' Hutd' Hsize'|Hre' t1|Hre' t1 Hdiscr'] eqn:ff; cbn in *.
         2: exfalso; clear -Hre Hre'; rewrite Hre in Hre'; discriminate.
-        1:{ exfalso. invs Heqt1.
-            destruct t0; invs H4.
-            destruct t0_2; invs H6.
+        1:{ exfalso. destruct t0; invs Heqt1.
+            destruct t0_2; invs H5.
             unfold shiftn in H4.
             destruct n0; [clear H4|discriminate].
-            cbn in Hdiscr.
-            (* assert (∑ X, lift0 1 X = rename (shiftn 1 r) t0_1 *)
-            (*              × upto_domain X t1'). { *)
-            (*   admit. } *)
-            (* destruct X as [? [? ?]]. *)
-
-            assert (∑ X, lift0 1 t1' = rename (shiftn 1 r) X
-                         × upto_domain t0_1 X). {
-              admit. }
-            destruct X as [? [? ?]].
-            assert (∑ X, x = lift0 1 X) by admit.
-            destruct X; subst.
-            now eapply Hdiscr. }
-
+            clear ff.
+            sap lift_rename_inv_upto_domain in Hutd'.
+            destruct Hutd'. now eapply Hdiscr. }
         subst t1. f_equal; eauto.
         erewrite H; trea; try lia.
         eapply (shift_renaming _ _ [_] [_]). repeat constructor. auto.
@@ -2705,12 +2953,12 @@ Section Rho.
   end : pcuic.
 
   Lemma pred1_subst_Up {re}:
-    ∀ (Γ : context) (na : name) (t0 t1 : term) (Δ Δ' : context) (σ τ : nat → term),
+    ∀ (Γ : context) (na na' na'' : name) (t0 t1 : term) (Δ Δ' : context) (σ τ : nat → term),
       pred1 re Σ Δ Δ' t0.[σ] t1.[τ] →
       pred1_subst re Γ Δ Δ' σ τ →
-      pred1_subst re (Γ,, vass na t0) (Δ,, vass na t0.[σ]) (Δ',, vass na t1.[τ]) (⇑ σ) (⇑ τ).
+      pred1_subst re (Γ,, vass na t0) (Δ,, vass na' t0.[σ]) (Δ',, vass na'' t1.[τ]) (⇑ σ) (⇑ τ).
   Proof.
-    intros Γ na t0 t1 Δ Δ' σ τ X2 Hrel.
+    intros Γ na na' na'' t0 t1 Δ Δ' σ τ X2 Hrel.
     intros x. destruct x; simpl. split; auto. eapply pred1_refl_gen. constructor; eauto with pcuic.
     unfold subst_compose. rewrite - !(lift0_inst 1).
     split. eapply (weakening_pred1_pred1 re Σ _ _ [_] [_]); auto.
@@ -2856,7 +3104,7 @@ Section Rho.
     revert Δ Δ' σ τ.
     revert Γ Γ' s t redst.
     set (P' := fun Γ Γ' => pred1_ctx re Σ Γ Γ').
-    refine (pred1_ind_all_ctx re Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst P';
+    refine (pred1_ind_all_ctx re Σ _ P' _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _); subst P';
       try (intros until Δ; intros Δ' σ τ Hσ Hτ Hrel); trivial.
 
     (* induction redst using ; sigma; intros Δ Δ' σ τ Hσ Hτ Hrel. *)
@@ -3042,8 +3290,11 @@ Section Rho.
       rewrite nth_error_map. now rewrite H.
 
     - (* Lambda congruence *)
-      sigma. econstructor. pcuic. eapply X2. eapply Up_ctxmap; pcuic.
+      sigma. econstructor; tas. pcuic. eapply X2. eapply Up_ctxmap; pcuic.
       eapply Up_ctxmap; pcuic. now eapply pred1_subst_Up.
+    - (* Lambda congruence *)
+      sigma. econstructor; tas. eapply X0. eapply Up_ctxmap; pcuic.
+      eapply Up_ctxmap; pcuic. eapply pred1_subst_Up; eauto.
 
     - (* App congruence *)
       sigma; auto with pcuic.
