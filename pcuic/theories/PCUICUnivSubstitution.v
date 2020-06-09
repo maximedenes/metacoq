@@ -1177,7 +1177,6 @@ Proof.
     eauto using beta_eta1_subst_instance.
 Defined.
 
-
 Lemma upto_domain_subst_instance t v :
   upto_domain t v ->
   forall u, upto_domain (subst_instance u t) (subst_instance_constr u v).
@@ -1185,6 +1184,24 @@ Proof.
   induction t in v |- * using term_forall_list_ind;
     intro e; invs e; cbn; try reflexivity; constructor; eauto; solve_all.
 Qed.
+
+Lemma beu1_subst_instance Σ Γ u s t :
+  beu1 Σ Γ s t ->
+  beu1 Σ (subst_instance_context u Γ)
+       (subst_instance_constr u s) (subst_instance_constr u t).
+Proof.
+  destruct 1; [left; now eapply beta_eta1_subst_instance
+              |right; now apply upto_domain_subst_instance].
+Defined.
+
+Lemma beu_subst_instance Σ Γ u s t :
+  beu Σ Γ s t ->
+  beu Σ (subst_instance_context u Γ)
+       (subst_instance_constr u s) (subst_instance_constr u t).
+Proof.
+  induction 1; [constructor 1|econstructor 2|econstructor 3];
+    eauto using beu1_subst_instance.
+Defined.
 
 Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   forallb (fun x => negb (Level.is_prop x)) u ->
@@ -1194,12 +1211,10 @@ Lemma cumul_subst_instance (Σ : global_env_ext) Γ u A B univs :
   (Σ.1,univs) ;;; subst_instance_context u Γ
                    |- subst_instance_constr u A <= subst_instance_constr u B.
 Proof.
-  intros Hu HH (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (subst_instance_constr u t'), (subst_instance_constr u t''),
-  (subst_instance_constr u u'), (subst_instance_constr u u'');
-    repeat split; try now apply upto_domain_subst_instance.
-  2: eapply leq_term_subst_instance; tea.
-  all: now apply beta_eta_subst_instance.
+  intros Hu HH (t' & u' & ? & ? & ?).
+  exists (subst_instance_constr u t'), (subst_instance_constr u u');
+    repeat split; try now eapply beu_subst_instance.
+  eapply leq_term_subst_instance; tea.
 Qed.
 
 Global Instance eq_decl_subst_instance : SubstUnivPreserved eq_decl.

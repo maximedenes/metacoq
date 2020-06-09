@@ -1645,6 +1645,30 @@ Proof.
   - etransitivity; eauto.
 Qed.
 
+Lemma beu1_rename :
+  forall Σ Γ Δ u v f,
+    wf Σ ->
+    urenaming Δ Γ f ->
+    beu1 Σ Γ u v ->
+    beu1 Σ Δ (rename f u) (rename f v).
+Proof.
+  intros Σ Γ Δ u v f X X0 [];
+    [left; now eapply beta_eta1_rename|right; now eapply upto_domain_rename].
+Qed.
+
+Lemma beu_rename :
+  forall Σ Γ Δ u v f,
+    wf Σ ->
+    urenaming Δ Γ f ->
+    beu Σ Γ u v ->
+    beu Σ Δ (rename f u) (rename f v).
+Proof.
+  intros Σ Γ Δ u v f X X0 X1; induction X1.
+  - constructor; now eapply beu1_rename.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
 
 (* TODO UPDATE We need to add rename_stack *)
 Lemma cumul_rename :
@@ -1655,12 +1679,10 @@ Lemma cumul_rename :
     Σ ;;; Δ |- rename f A <= rename f B.
 Proof.
   intros Σ Γ Δ f A B hΣ hf.
-  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (rename f t'), (rename f t''), (rename f u'), (rename f u'');
-    repeat split.
-  1,5: now apply upto_domain_rename.
-  2: now eapply eq_term_upto_univ_rename.
-  all: now eapply beta_eta_rename.
+  intros (t' & u' & ? & ? & ?).
+  exists (rename f t'), (rename f u'); repeat split.
+  1,3: now eapply beu_rename.
+  now eapply eq_term_upto_univ_rename.
 Qed.
 
 Lemma typing_rename_prop : env_prop

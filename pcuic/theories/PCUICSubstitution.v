@@ -2280,17 +2280,52 @@ Proof.
   - etransitivity; eauto.
 Qed.
 
+(* todo: move *)
+Lemma beta_eta_beu Σ Γ M N :
+  beta_eta Σ Γ M N -> beu Σ Γ M N.
+Proof.
+  induction 1.
+  - constructor. now left.
+  - reflexivity.
+  - etransitivity; eassumption.
+Qed.
+
+Lemma upto_domain_beu Σ Γ M N :
+  upto_domain M N -> beu Σ Γ M N.
+Proof.
+  constructor. now right.
+Qed.
+
+Lemma substitution_untyped_let_beu1 {cf:checker_flags} Σ Γ Δ Γ' s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  beu1 Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beu Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 [].
+  + now eapply beta_eta_beu, substitution_untyped_let_beta_eta1.
+  + now eapply upto_domain_beu, substitution_upto_domain.
+Qed.
+
+Lemma substitution_untyped_let_beu {cf:checker_flags} Σ Γ Δ Γ' s M N :
+  wf Σ -> untyped_subslet Γ s Δ ->
+  beu Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beu Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 X1; induction X1.
+  - now eapply substitution_untyped_let_beu1.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
 Lemma substitution_untyped_cumul {cf:checker_flags} Σ Γ Γ' Γ'' s M N :
   wf Σ.1 -> untyped_subslet Γ s Γ' ->
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
-  intros wfΣ Hs (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (subst s #|Γ''| t'), (subst s #|Γ''| t''),
-  (subst s #|Γ''| u'), (subst s #|Γ''| u''); repeat split.
-  1,5: now apply substitution_upto_domain.
-  2: apply subst_leq_term; eassumption.
-  all: now eapply substitution_untyped_let_beta_eta.
+  intros wfΣ Hs (t' & u' & ? & ? & ?).
+  exists (subst s #|Γ''| t'), (subst s #|Γ''| u'); repeat split.
+  1,3: now eapply substitution_untyped_let_beu.
+  apply subst_leq_term; eassumption.
 Qed.
 
 Lemma substitution_cumul0 {cf:checker_flags} Σ Γ na t u u' a : wf Σ.1 ->
@@ -2338,6 +2373,29 @@ Proof.
   - etransitivity; eauto.
 Qed.
 
+Lemma substitution_let_beu1 {cf:checker_flags} (Σ : global_env_ext)
+      Γ Δ Γ' s M N :
+  wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->
+  beu1 Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beu Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 wfΓ [].
+  - now eapply beta_eta_beu, substitution_let_beta_eta1.
+  - now eapply upto_domain_beu, substitution_upto_domain.
+Qed.
+
+Lemma substitution_let_beu {cf:checker_flags} (Σ : global_env_ext)
+      Γ Δ Γ' s M N :
+  wf Σ -> subslet Σ Γ s Δ -> wf_local Σ Γ ->
+  beu Σ (Γ ,,, Δ ,,, Γ') M N ->
+  beu Σ (Γ ,,, subst_context s 0 Γ') (subst s #|Γ'| M) (subst s #|Γ'| N).
+Proof.
+  intros X X0 wfΓ X1; induction X1.
+  - now eapply substitution_let_beu1.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
 
 (** The cumulativity relation is substitutive, yay! *)
 
@@ -2346,12 +2404,10 @@ Lemma substitution_cumul `{cf : checker_flags} (Σ : global_env_ext) Γ Γ' Γ''
   Σ ;;; Γ ,,, Γ' ,,, Γ'' |- M <= N ->
   Σ ;;; Γ ,,, subst_context s 0 Γ'' |- subst s #|Γ''| M <= subst s #|Γ''| N.
 Proof.
-  intros wfΣ wfΓ Hs (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (subst s #|Γ''| t'), (subst s #|Γ''| t''),
-  (subst s #|Γ''| u'), (subst s #|Γ''| u''); repeat split.
-  1,5: now apply substitution_upto_domain.
-  2: apply subst_leq_term; eassumption.
-  all: eapply substitution_let_beta_eta; eauto with wf.
+  intros wfΣ wfΓ Hs (t' & u' & ? & ? & ?).
+  exists (subst s #|Γ''| t'), (subst s #|Γ''| u'); repeat split.
+  1,3: eapply substitution_let_beu; eauto with wf.
+  apply subst_leq_term; eassumption.
 Qed.
 
 

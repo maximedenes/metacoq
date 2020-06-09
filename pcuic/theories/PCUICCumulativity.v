@@ -145,10 +145,10 @@ Qed.
 Lemma conv_cumul2 {cf:checker_flags} Σ Γ t u :
   Σ ;;; Γ |- t = u -> (Σ ;;; Γ |- t <= u) * (Σ ;;; Γ |- u <= t).
 Proof.
-  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  intros (t' & u' & ? & ? & ?).
   split.
-  - exists t', t'', u', u''; repeat split; tas; try now apply eq_term_leq_term.
-  - exists u', u'', t', t''; repeat split; tas; try now apply eq_term_leq_term.
+  - exists t', u'; repeat split; tas; try now apply eq_term_leq_term.
+  - exists u', t'; repeat split; tas; try now apply eq_term_leq_term.
 Qed.
 
 Lemma conv_cumul {cf:checker_flags} Σ Γ t u :
@@ -173,8 +173,8 @@ Abort.
 Instance conv_sym `{cf : checker_flags} (Σ : global_env_ext) Γ :
   Symmetric (conv Σ Γ).
 Proof.
-  intros ? ? (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists u', u'', t', t''; repeat split; tas; now symmetry.
+  intros ? ? (t' & u' & ? & ? & ?).
+  exists u', t'; repeat split; tas; now symmetry.
 Qed.
 
 Lemma eq_term_App `{checker_flags} φ f f' :
@@ -225,5 +225,5 @@ Proof.
   (* intro H. *)
   (* cut (H = H); [|reflexivity]. *)
   (* induction H. *)
-  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
+  intros (t' & u' & ? & ? & ?).
 Admitted.

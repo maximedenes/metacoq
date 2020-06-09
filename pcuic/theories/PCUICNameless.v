@@ -938,10 +938,10 @@ Lemma eta1_nl u v : eta1 u v -> eta1 (nl u) (nl v).
 Proof.
 Admitted.
 
-Lemma nl_beta_eta :
+Lemma nl_beu :
   forall Σ Γ M N,
-    beta_eta Σ Γ M N ->
-    beta_eta (map (on_snd nl_global_decl) Σ) (nlctx Γ) (nl M) (nl N).
+    beu Σ Γ M N ->
+    beu (map (on_snd nl_global_decl) Σ) (nlctx Γ) (nl M) (nl N).
 Admitted.
 
 Lemma nl_upto_domain u v :
@@ -957,11 +957,10 @@ Lemma nl_cumul {cf:checker_flags} :
     Σ ;;; Γ |- A <= B ->
     nlg Σ ;;; nlctx Γ |- nl A <= nl B.
 Proof.
-  intros Σ Γ A B (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (nl t'), (nl t''), (nl u'), (nl u''); repeat split.
-  1,5: now apply nl_upto_domain.
+  intros Σ Γ A B (t' & u' & ? & ? & ?).
+  exists (nl t'), (nl u'); repeat split.
   2: rewrite global_ext_constraints_nlg; now apply nl_leq_term.
-  all: destruct Σ; now eapply nl_beta_eta.
+  all: destruct Σ; now eapply nl_beu.
 Qed.
 
 Lemma nl_destArity :

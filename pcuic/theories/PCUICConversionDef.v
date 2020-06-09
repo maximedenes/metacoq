@@ -518,6 +518,9 @@ Definition eta := clos_refl_trans eta1.
 Definition beta_eta1 Σ Γ := union (red1 Σ Γ) eta1.
 Definition beta_eta Σ Γ := clos_refl_trans (beta_eta1 Σ Γ).
 
+Definition beu1 Σ Γ := union (beta_eta1 Σ Γ) upto_domain.
+Definition beu Σ Γ := clos_refl_trans (beu1 Σ Γ).
+
 
 
 (** ** Cumulativity and conversion *)
@@ -526,18 +529,14 @@ Definition beta_eta Σ Γ := clos_refl_trans (beta_eta1 Σ Γ).
     to two equal terms up to universes and in the cumul/conv relation *)   
 
 Definition cumul `{checker_flags} (Σ : global_env_ext) (Γ : context) (t u : term)
-  := ∑ t' t'' u' u'', upto_domain t t' ×
-                      beta_eta Σ Γ t' t'' ×
-                      leq_term Σ t'' u'' ×
-                      beta_eta Σ Γ u' u'' ×
-                      upto_domain u u'.
+  := ∑ t' u', beu Σ Γ t t' ×
+              leq_term Σ t' u' ×
+              beu Σ Γ u u'.
 
 Definition conv `{checker_flags} (Σ : global_env_ext) (Γ : context) (t u : term)
-  := ∑ t' t'' u' u'', upto_domain t t' ×
-                      beta_eta Σ Γ t' t'' ×
-                      eq_term Σ t'' u'' ×
-                      beta_eta Σ Γ u' u'' ×
-                      upto_domain u u'.
+  := ∑ t' u', beu Σ Γ t t' ×
+              eq_term Σ t' u' ×
+              beu Σ Γ u u'.
 
 Notation " Σ ;;; Γ |- t <= u " := (cumul Σ Γ t u) (at level 50, Γ, t, u at next level).
 Notation " Σ ;;; Γ |- t = u " := (conv Σ Γ t u) (at level 50, Γ, t, u at next level).
@@ -1162,6 +1161,56 @@ Proof.
 Qed.
 Hint Resolve beta_eta_mkApps : beta_eta.
 
+
+(** ** Basic Properties of beu *)
+
+Hint Constructors eta1 : beu.
+Hint Constructors red1 : beu.
+
+Definition beu_refl Σ Γ x : beu Σ Γ x x := clos_refl_trans_refl _ _.
+Hint Resolve beu_refl : beu.
+
+Definition beu_trans Σ Γ x y z :
+  beu Σ Γ x y -> beu Σ Γ y z -> beu Σ Γ x z
+  := clos_refl_trans_trans _ x y z.
+Hint Resolve beu_trans : beu.
+
+Lemma red_beu Σ Γ M N :
+  red Σ Γ M N -> beu Σ Γ M N.
+Proof.
+  induction 1; try reflexivity.
+  - constructor. left. now left.
+  - etransitivity; tea.
+Defined.
+Hint Resolve red_beu : beu.
+
+Lemma eta_beu Σ Γ M N :
+  eta M N -> beu Σ Γ M N.
+Proof.
+  induction 1; try reflexivity.
+  - constructor. left. now right.
+  - etransitivity; tea.
+Defined.
+Hint Resolve eta_beu : beu.
+
+Lemma upto_domain_beu Σ Γ M N :
+  upto_domain M N -> beu Σ Γ M N.
+Proof.
+  constructor. now right.
+Defined.
+Hint Resolve upto_domain_beu : beu.
+
+Hint Resolve eta1_eta : beu.
+Hint Resolve red1_red : beu.
+
+Lemma red1_beu Σ Γ M N :
+  red1 Σ Γ M N -> beu Σ Γ M N.
+Proof. eauto with beu. Defined.
+
+Lemma eta1_beu Σ Γ M N :
+  eta1 M N -> beu Σ Γ M N.
+Proof. eauto with beu. Defined.
+
  
 (** ** Basic Properties of cumul *)
 
@@ -1193,8 +1242,8 @@ Lemma red_cumul {cf:checker_flags} {Σ : global_env_ext} {Γ t u} :
   red Σ Γ t u ->
   Σ ;;; Γ |- t <= u.
 Proof.
-  intros; repeat eexists; repeat split.
-  2: eapply red_beta_eta; eassumption.
+  intros; repeat eexists.
+  eapply red_beu; eassumption.
   all: reflexivity.
 Qed.
 
@@ -1202,8 +1251,8 @@ Lemma red_cumul_inv {cf:checker_flags} {Σ : global_env_ext} {Γ t u} :
   red Σ Γ t u ->
   Σ ;;; Γ |- u <= t.
 Proof.
-  intros; repeat eexists; repeat split.
-  4: eapply red_beta_eta; eassumption.
+  intros; repeat eexists.
+  3: eapply red_beu; eassumption.
   all: reflexivity.
 Qed.
 
@@ -1227,19 +1276,124 @@ Qed.
 Lemma red_conv {cf:checker_flags} (Σ : global_env_ext) Γ t u :
   red Σ Γ t u -> Σ ;;; Γ |- t = u.
 Proof.
-  intros; repeat eexists; repeat split.
-  2: eapply red_beta_eta; eassumption.
+  intros; repeat eexists.
+  eapply red_beu; eassumption.
   all: reflexivity.
 Qed.
 
 Lemma red_conv_inv {cf:checker_flags} (Σ : global_env_ext) Γ t u :
   red Σ Γ t u -> Σ ;;; Γ |- u = t.
 Proof.
-  intros; repeat eexists; repeat split.
-  4: eapply red_beta_eta; eassumption.
+  intros; repeat eexists.
+  3: eapply red_beu; eassumption.
   all: reflexivity.
 Qed.
 
+(** ** Upto types: assumptions does not change reduction  ** **)
+
+Inductive upto_types : context -> context -> Type :=
+| upto_types_nil : upto_types [] []
+| upto_types_vass {Γ Γ' na na' A A'} : upto_types Γ Γ' -> upto_types (Γ ,, vass na A) (Γ' ,, vass na' A')
+| upto_types_vdef {Γ Γ' na na' t A A'} : upto_types Γ Γ' -> upto_types (Γ ,, vdef na t A) (Γ' ,, vdef na' t A').
+
+Instance upto_types_refl : Reflexive upto_types.
+Proof.
+  intro Γ; induction Γ as [|[na [bo|] ty]]; now econstructor.
+Qed.
+
+Instance upto_types_sym : Symmetric upto_types.
+Proof.
+  intros Γ Γ' e; induction e; constructor; auto.
+Qed.
+
+Instance upto_types_trans : Transitive upto_types.
+Proof.
+  intros Γ Γ' Γ'' e e'; induction e in Γ'', e' |- *;
+    invs e'; constructor; auto.
+Qed.
+
+Lemma upto_types_app {Γ Γ' Δ Δ'} :
+  upto_types Γ Γ' -> upto_types Δ Δ' -> upto_types (Γ ,,, Δ) (Γ' ,,, Δ').
+Proof.
+  intros e1 e2; induction e2; simpl; try constructor; auto.
+Qed.
+
+Lemma lookup_upto_types {Γ Γ'} i :
+  upto_types Γ Γ' ->
+  option_map decl_body (nth_error Γ i)
+  = option_map decl_body (nth_error Γ' i).
+Proof.
+  induction i in Γ, Γ' |- *; intro e; destruct e; cbn; auto.
+Qed.
+
+Hint Constructors red1 : upto_types.
+Hint Constructors upto_types : upto_types.
+
+
+Lemma red1_upto_types {Σ Γ Γ' t t'} :
+  upto_types Γ Γ' -> red1 Σ Γ t t' -> red1 Σ Γ' t t'.
+Proof.
+  intros e X; induction X in Γ', e |- * using red1_ind_all;
+    eauto with upto_types.
+  1: constructor; erewrite <- lookup_upto_types; tea.
+  all: try (constructor; solve_all; fail).
+  - apply fix_red_body; solve_all.
+    apply b0. now apply upto_types_app.
+  - apply cofix_red_body; solve_all.
+    apply b0. now apply upto_types_app.
+Qed.
+
+Lemma red_upto_types {Σ Γ Γ' t t'} :
+  upto_types Γ Γ' -> red Σ Γ t t' -> red Σ Γ' t t'.
+Proof.
+  intros e X; induction X in Γ', e |- *.
+  - constructor; eauto using red1_upto_types.
+  - reflexivity.
+  - etransitivity; [eapply IHX1|eapply IHX2]; assumption.
+Qed.
+
+Lemma beta_eta_upto_types {Σ Γ Γ' t t'} :
+  upto_types Γ Γ' -> beta_eta Σ Γ t t' -> beta_eta Σ Γ' t t'.
+Proof.
+  intros e X; induction X in Γ', e |- *; [|beta_eta ..].
+  constructor. destruct r; [left|right]; tas.
+  eapply red1_upto_types; eassumption.
+Qed.
+Hint Resolve beta_eta_upto_types : beta_eta.
+
+Lemma red1_upto_vass {Σ Γ na na' A A' t t'} :
+  red1 Σ (Γ ,, vass na A) t t' -> red1 Σ (Γ ,, vass na' A') t t'.
+Proof.
+  apply red1_upto_types. now constructor.
+Qed.
+Hint Resolve red1_upto_vass : beta.
+
+Lemma beta_eta_upto_vass {Σ Γ na na' A A' t t'} :
+  beta_eta Σ (Γ ,, vass na A) t t' -> beta_eta Σ (Γ ,, vass na' A') t t'.
+Proof.
+  apply beta_eta_upto_types. now constructor.
+Qed.
+Hint Resolve beta_eta_upto_vass : beta_eta.
+
+Lemma upto_types_fix_context mfix mfix' :
+  #|mfix| = #|mfix'| -> upto_types (fix_context mfix) (fix_context mfix').
+Proof.
+  unfold fix_context, mapi. generalize 0 at 2 4 as k.
+  induction mfix in mfix' |- *; destruct mfix'; try discriminate.
+  - constructor.
+  - simpl. intros k H. apply upto_types_app; eauto using upto_types.
+Qed.
+
+Lemma beta_eta_upto_fix_context {Σ Γ mfix mfix' t t'} :
+  #|mfix| = #|mfix'| -> 
+  beta_eta Σ (Γ ,,, fix_context mfix) t t' ->
+  beta_eta Σ (Γ ,,, fix_context mfix') t t'.
+Proof.
+  intro H.
+  apply beta_eta_upto_types. eapply upto_types_app; trea.
+  now apply upto_types_fix_context.
+Qed.
+Hint Resolve beta_eta_upto_fix_context : beta_eta.
 
 
 

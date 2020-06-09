@@ -5,8 +5,10 @@ From Coq Require Import Bool List Utf8
   ZArith Lia Morphisms.
 From MetaCoq.Template Require Import config utils.
 From MetaCoq.PCUIC Require Import PCUICAst PCUICAstUtils PCUICSize
-     PCUICLiftSubst PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction PCUICSubstitution
-     PCUICReflect PCUICClosed PCUICParallelReduction.
+     PCUICLiftSubst PCUICSigmaCalculus PCUICUnivSubst PCUICTyping PCUICReduction
+     PCUICSubstitution PCUICReflect PCUICClosed PCUICParallelReduction.
+Require Import PCUICEquality PCUICInduction
+        PCUICBasicStrengthening PCUICEtaReduction.
 
 (* Type-valued relations. *)
 Require Import CRelationClasses.
@@ -601,8 +603,6 @@ Section Pred1_inversion.
 End Pred1_inversion.
 
 Hint Constructors pred1 : pcuic.
-
-Require Import PCUICEquality PCUICInduction.
 
 Local Ltac nowright := let t' := fresh in let X := fresh in
                  right; intros t' X; destruct t'; invs X; trea; eauto.
@@ -1638,8 +1638,6 @@ Section Rho.
   Proof.
     destruct t; simpl; try congruence.
   Qed.
-
-Require Import PCUICBasicStrengthening.
 
   Lemma lift_inj_upto_domain n k t u :
     upto_domain (lift n k t) (lift n k u) -> upto_domain t u.
@@ -3295,6 +3293,7 @@ Proof. intros. rewrite -(map_id l') in X. eapply All2_map_inv; eauto. Qed.
     - (* Lambda congruence *)
       sigma. econstructor; tas. eapply X0. eapply Up_ctxmap; pcuic.
       eapply Up_ctxmap; pcuic. eapply pred1_subst_Up; eauto.
+      todoeta.
 
     - (* App congruence *)
       sigma; auto with pcuic.
@@ -3400,7 +3399,7 @@ Proof. intros. rewrite -(map_id l') in X. eapply All2_map_inv; eauto. Qed.
   pred1 re Σ Γ Δ t u -> pred1 re Σ Δ (rho_ctx Γ) u (rho (rho_ctx Γ) t).
   Proof with solve_discr.
     intros Pctx H. revert Γ Δ t u H.
-    refine (pred1_ind_all_ctx re Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
+    refine (pred1_ind_all_ctx re Σ _ Pctx _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
       subst Pctx; intros *.
     all:try intros **; rename_all_hyps;
       try solve [specialize (forall_Γ _ X3); eauto]; eauto;
@@ -3555,6 +3554,7 @@ Proof. intros. rewrite -(map_id l') in X. eapply All2_map_inv; eauto. Qed.
       simpl in y. rewrite e0. simpl.
       auto.
 
+    - todoeta.
     - todoeta.
     (* - simpl; simp rho. eapply pred_abs; auto. unfold snoc in *. simpl in X2. *)
     (*   rewrite app_context_nil_l in X2. apply X2. *)

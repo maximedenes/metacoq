@@ -847,16 +847,29 @@ Proof.
   - rewrite (All2_length _ _ X0). solve_all.
 Qed.
 
+Lemma weakening_beu `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
+  wf Σ ->
+  beu Σ (Γ ,,, Γ') M N ->
+  beu Σ (Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ') (lift #|Γ''| #|Γ'| M) (lift #|Γ''| #|Γ'| N).
+Proof.
+  intros wfΣ; induction 1.
+  - constructor. destruct r as [[]|].
+    + left; left ; eapply weakening_red1; tea.
+    + left; right; eapply weakening_eta1; tea.
+    + right; eapply weakening_upto_domain; tea. 
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
 Lemma weakening_cumul `{CF:checker_flags} Σ Γ Γ' Γ'' M N :
   wf Σ.1 ->
   Σ ;;; Γ ,,, Γ' |- M <= N ->
   Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M <= lift #|Γ''| #|Γ'| N.
 Proof.
   intros wfΣ.
-  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (lift #|Γ''| #|Γ'| t'), (lift #|Γ''| #|Γ'| t''),
-  (lift #|Γ''| #|Γ'| u'), (lift #|Γ''| #|Γ'| u''); repeat split;
-  eauto using weakening_upto_domain, weakening_beta_eta, lift_leq_term.
+  intros (t' & u' & ? & ? & ?).
+  exists (lift #|Γ''| #|Γ'| t'), (lift #|Γ''| #|Γ'| u'); repeat split;
+  eauto using weakening_beu, lift_leq_term.
 Qed.
 
 Lemma destArity_it_mkProd_or_LetIn ctx ctx' t :
@@ -1235,10 +1248,9 @@ Lemma weakening_conv `{cf:checker_flags} :
     Σ ;;; Γ ,,, Γ'' ,,, lift_context #|Γ''| 0 Γ' |- lift #|Γ''| #|Γ'| M = lift #|Γ''| #|Γ'| N.
 Proof.
   intros Σ Γ Γ' Γ'' M N wfΣ.
-  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists (lift #|Γ''| #|Γ'| t'), (lift #|Γ''| #|Γ'| t''),
-  (lift #|Γ''| #|Γ'| u'), (lift #|Γ''| #|Γ'| u''); repeat split;
-  eauto using weakening_upto_domain, weakening_beta_eta, lift_eq_term.
+  intros (t' & u' & ? & ? & ?).
+  exists (lift #|Γ''| #|Γ'| t'), (lift #|Γ''| #|Γ'| u'); repeat split;
+  eauto using weakening_beu, lift_eq_term.
 Qed.
 
 Lemma weaken_wf_local {cf:checker_flags} {Σ Γ } Δ : 

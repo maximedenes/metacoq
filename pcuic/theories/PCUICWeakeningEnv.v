@@ -202,6 +202,16 @@ Proof.
   - etransitivity; eauto.
 Qed.
 
+Lemma weakening_env_beta_eta1 `{CF:checker_flags} Σ Σ' Γ M N :
+  wf Σ' ->
+  extends Σ Σ' ->
+  beta_eta1 Σ Γ M N ->
+  beta_eta1 Σ' Γ M N.
+Proof.
+  intros X X0 X1. destruct X1; [left|right]; tas.
+  now eapply weakening_env_red1.
+Qed.
+
 Lemma weakening_env_beta_eta `{CF:checker_flags} Σ Σ' Γ M N :
   wf Σ' ->
   extends Σ Σ' ->
@@ -209,7 +219,19 @@ Lemma weakening_env_beta_eta `{CF:checker_flags} Σ Σ' Γ M N :
   beta_eta Σ' Γ M N.
 Proof.
   intros X X0 X1. induction X1.
-  - constructor. destruct r; [left|right]; tas. now eapply weakening_env_red1.
+  - constructor. now eapply weakening_env_beta_eta1.
+  - reflexivity.
+  - etransitivity; eauto.
+Qed.
+
+Lemma weakening_env_beu `{CF:checker_flags} Σ Σ' Γ M N :
+  wf Σ' ->
+  extends Σ Σ' ->
+  beu Σ Γ M N ->
+  beu Σ' Γ M N.
+Proof.
+  intros X X0 X1. induction X1.
+  - constructor. destruct r; [left|right]; tas. now eapply weakening_env_beta_eta1.
   - reflexivity.
   - etransitivity; eauto.
 Qed.
@@ -221,12 +243,12 @@ Lemma weakening_env_cumul `{CF:checker_flags} Σ Σ' φ Γ M N :
   cumul (Σ', φ) Γ M N.
 Proof.
   intros wfΣ HΣ.
-  intros (t' & t'' & u' & u'' & ? & ? & ? & ? & ?).
-  exists t', t'', u', u''; repeat split; tas.
+  intros (t' & u' & ? & ? & ?).
+  exists t', u'; repeat split; tas.
   2:{ destruct HΣ as [? ->]. eapply leq_term_subset.
       + eapply global_ext_constraints_app.
       + assumption. }
-  all: eapply weakening_env_beta_eta; tea.
+  all: eapply weakening_env_beu; tea.
 Qed.
 
 (* Lemma weakening_env_consistent_universe_context_instance `{checker_flags} : *)
