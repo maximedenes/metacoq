@@ -1486,6 +1486,7 @@ Inductive upto_domain : term -> term -> Type :=
 | utd_Fix mfix mfix' idx :
     All2 (fun x y => upto_domain x.(dtype) y.(dtype) ×
                   upto_domain x.(dbody) y.(dbody) ×
+                  x.(dname) = y.(dname) ×
                   x.(rarg) = y.(rarg)
                 ) mfix mfix' ->
     upto_domain (tFix mfix idx) (tFix mfix' idx)
@@ -1493,6 +1494,7 @@ Inductive upto_domain : term -> term -> Type :=
 | utd_CoFix mfix mfix' idx :
     All2 (fun x y => upto_domain x.(dtype) y.(dtype) ×
                   upto_domain x.(dbody) y.(dbody) ×
+                  x.(dname) = y.(dname) ×
                   x.(rarg) = y.(rarg)
                 ) mfix mfix' ->
     upto_domain (tCoFix mfix idx) (tCoFix mfix' idx).
@@ -1531,8 +1533,10 @@ Proof.
   - solve_all.
     induction X0 in mfix'0, X1 |- *; invs X1; constructor; intuition eauto.
     rdest; cbn in *; congruence.
+    rdest; cbn in *; congruence.
   - solve_all.
     induction X0 in mfix'0, X1 |- *; invs X1; constructor; intuition eauto.
+    rdest; cbn in *; congruence.
     rdest; cbn in *; congruence.
 Qed.
 

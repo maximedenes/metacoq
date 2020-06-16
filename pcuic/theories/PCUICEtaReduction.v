@@ -1208,6 +1208,7 @@ Proof.
                       × rarg d0 = rarg d1) mfix1 mfix2
             × All2 (fun x y => upto_domain (dtype x) (dtype y)
                       × upto_domain (dbody x) (dbody y)
+                      × dname x = dname y
                       × rarg x = rarg y) mfix2 mfix4
             × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
                       × dbody d0 = dbody d1 × dname d0 = dname d1
@@ -1250,6 +1251,7 @@ Proof.
                       × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
             × All2 (fun x y => upto_domain (dtype x) (dtype y)
                       × upto_domain (dbody x) (dbody y)
+                      × dname x = dname y
                       × rarg x = rarg y) mfix2 mfix4
             × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
                       × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
@@ -1339,6 +1341,7 @@ Proof.
                       × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
             × All2 (fun x y => upto_domain (dtype x) (dtype y)
                       × upto_domain (dbody x) (dbody y)
+                      × dname x = dname y
                       × rarg x = rarg y) mfix2 mfix4
             × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
                       × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
@@ -1392,6 +1395,7 @@ Proof.
                       × rarg d0 = rarg d1) mfix1 mfix2
             × All2 (fun x y => upto_domain (dtype x) (dtype y)
                       × upto_domain (dbody x) (dbody y)
+                      × dname x = dname y
                       × rarg x = rarg y) mfix2 mfix4
             × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
                       × dbody d0 = dbody d1 × dname d0 = dname d1
@@ -1434,6 +1438,7 @@ Proof.
                       × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
             × All2 (fun x y => upto_domain (dtype x) (dtype y)
                       × upto_domain (dbody x) (dbody y)
+                      × dname x = dname y
                       × rarg x = rarg y) mfix2 mfix4
             × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
                       × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
@@ -1523,6 +1528,7 @@ Proof.
                       × dname d0 = dname d1 × rarg d0 = rarg d1) mfix1 mfix2
             × All2 (fun x y => upto_domain (dtype x) (dtype y)
                       × upto_domain (dbody x) (dbody y)
+                      × dname x = dname y
                       × rarg x = rarg y) mfix2 mfix4
             × All2 (fun d0 d1 => beta_eta Σ Γ (dtype d0) (dtype d1)
                       × beta_eta Σ (Γ ,,, fix_context mfix3) (dbody d0) (dbody d1)
