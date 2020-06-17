@@ -1985,6 +1985,7 @@ Proof.
   destruct t; invs X1; trea.
 Qed.
 
+  Ltac simprho := repeat (cbn; simp rho).
 
   Lemma rho_eta_upto_domain Γ t u :
     reduce_eta ->
@@ -1995,14 +1996,11 @@ Qed.
     funelim (rho Γ t); intros uu Hu; invs_utd.
     1-23: repeat (simp rho; cbn -[inspect]);
       try (repeat (rewrite ?Heq ?Heq0; cbn); reflexivity).
-    - simp rho. f_equal.
-      eapply eq_map_forall_In; tea.
+    - f_equal. eapply eq_map_forall_In; tea.
       intros x y H0 H1 X0. eapply H; tea; cbnr.
       constructor. now apply size_In.
-    - simp rho. f_equal; auto.
-      erewrite <- (H _ a'); tea. auto.
-    - simp rho.  f_equal; auto.
-      erewrite <- (H _ t'); tea.
+    - f_equal; auto. erewrite <- (H _ a'); tea. auto.
+    - f_equal; auto. erewrite <- (H _ t'); tea.
       erewrite <- (H0 _ ty'); tea. auto.
     - f_equal.
       assert (fold_fix_context rho Γ [] mfix
@@ -2086,8 +2084,7 @@ Qed.
       apply rho_upto_types. now constructor.
     - change (mkApps (tApp (tLambda na' ty' t'0) u'0) x0)
         with (mkApps (tLambda na' ty' t'0) (u'0 :: x0)).
-      rewrite view_lambda_fix_app_lambda_app.
-      repeat (cbn; simp rho).
+      rewrite view_lambda_fix_app_lambda_app. simprho.
       erewrite H; tea. f_equal.
       + f_equal. etransitivity; [eapply H1|]; tea.
         apply rho_upto_types. now constructor.
@@ -2100,70 +2097,133 @@ Qed.
         erewrite upto_domain_isFixLambda_app; tea. symmetry; utd. }
       rewrite view_lambda_fix_app_other. cbn.
       f_equal; eauto.
-
-
-
-
-
-
-
-    refine (term_ind_size_app _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _);
-      intros; invs_utd; trea.
-    - simp rho. f_equal. solve_all. induction X1; cbnr.
-      f_equal; tas. rdest. eauto.
-    - simp rho. f_equal; auto.
-      erewrite H; tea. auto.
-    - simp rho.
-      destruct (view_eta_redex reduce_eta t0)
-        as [Hre' t0 t0' Hutd Hsize|Hre' t0|Hre' t0 Hdiscr] eqn:ee; cbn in *.
-      2: exfalso; clear -Hre Hre'; rewrite Hre in Hre'; discriminate.
-      + destruct (view_eta_redex reduce_eta t')
-          as [Hre'' t1 t1' Hutd' Hsize'|Hre'' t1|Hre'' t1 Hdiscr'] eqn:ff; cbn in *.
-        2: exfalso; clear -Hre Hre''; rewrite Hre in Hre''; discriminate.
-        * eapply H. lia. eapply lift_inj_upto_domain.
-          etransitivity; tea. invs_utd. etransitivity; tea. now symmetry.
-        * invs_utd. exfalso; eapply Hdiscr'.
-          etransitivity; tea. now symmetry.
-      + destruct (view_eta_redex reduce_eta t')
-          as [Hre'' t1 t1' Hutd' Hsize'|Hre'' t1|Hre'' t1 Hdiscr'] eqn:ff; cbn in *.
-        2: exfalso; clear -Hre Hre''; rewrite Hre in Hre''; discriminate.
-        * invs_utd. exfalso; eapply Hdiscr.
-          etransitivity; tea.
-        * f_equal. eauto.
-    - simp rho. f_equal; auto.
-      erewrite H; tea. erewrite H0; tea. eauto.
-    - simp rho; eauto.
-      destruct (view_lambda_fix_app t u).
-      + sap upto_domain_mkApps_inv in X0.
-        destruct X0 as [x [? [? [u ?]]]].
-        destruct x; inversion u.
-        destruct (view_lambda_fix_app t' u'); subst.
-        * admit.
-        * exfalso. 
-          eapply mkApps_eq_inj in e as [XX ?]; [invs XX| |]; auto.
-        * exfalso. rewrite isFixLambda_app_mkApps' in i0; cbnr; discriminate.
-      + sap upto_domain_mkApps_inv in X0.
-        destruct X0 as [x [? [? [u ?]]]].
-        destruct x; inversion u.
-        destruct (view_lambda_fix_app t' u'); subst.
-        * exfalso. 
-          eapply mkApps_eq_inj in e as [XX ?]; [invs XX| |]; auto.
-        * admit.
-        * exfalso. rewrite isFixLambda_app_mkApps' in i; cbnr; discriminate.
-      + destruct (view_lambda_fix_app t' u').
-        * exfalso. apply upto_domain_mkApps_inv in X0.
-          destruct X0 as [x [? [? [u ?]]]].
-          destruct x; invs u.
-          rewrite isFixLambda_app_mkApps' in i; cbnr; discriminate.
-        * exfalso. apply upto_domain_mkApps_inv in X0.
-          destruct X0 as [x [? [? [u ?]]]].
-          destruct x; invs u.
-          rewrite isFixLambda_app_mkApps' in i; cbnr; discriminate.
-        * admit.
-    - admit.
-    - destruct s as [[? ?] ?]. simp rho. cbn. admit.
-    - simp rho. cbn. f_equal.
-  Admitted.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_case. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X0 as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      destruct t; try invs Y1.
+      assert (map (fun x => (x.1, rho Γ x.2)) brs = map (on_snd (rho Γ)) brs'). {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy []. f_equal; tas.
+        eapply H1; trea. cbn. eapply (size_In (size ∘ snd)) in Hx. lia. }
+      assert (fold_fix_context rho Γ [] mfix
+              = fold_fix_context rho Γ [] mfix0) as ee. {
+        rewrite !fold_fix_context_rev. f_equal.
+        eapply eq_mapi_forall_In; tea; cbn.
+        intros x y Hx Hy (? & ? & ? & ?) ?i.
+        f_equal; tas. f_equal. eapply H2; trea.
+        apply mfixpoint_size_In in Hx as []; lia. }
+      rewrite ee.
+      assert (map_fix rho Γ (fold_fix_context rho Γ [] mfix0) mfix
+              = map_fix rho Γ (fold_fix_context rho Γ [] mfix0) mfix0) as ff. {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy ?; rdest. f_equal; tas.
+        + eapply H2; trea. apply mfixpoint_size_In in Hx as []; lia.
+        + eapply H2; trea. apply mfixpoint_size_In in Hx as []; lia. }
+      rewrite ff. rewrite nth_error_map.
+      destruct (nth_error mfix0 idx0) eqn:gg; cbnr.
+      + f_equal; auto. f_equal. f_equal.
+        * erewrite map_cofix_subst'; cbnr.
+          intro. now simprho.
+        * eapply eq_map_forall_In; tea.
+          intros x y Hx Hy X3. eapply H1; trea.
+          eapply size_In' in Hx. cbn.
+          clear H5. sap decompose_app_inv in e.
+          rewrite e size_mkApps. cbn; lia.
+      + f_equal; auto.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_case. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X0 as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      erewrite H by eauto. erewrite H0 by eauto. clear H H0.
+      assert (H : map (fun x => (x.1, rho Γ x.2)) brs = map (on_snd (rho Γ)) brs'). {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy []. f_equal; tas.
+        eapply H1; trea. cbn. eapply (size_In (size ∘ snd)) in Hx. lia. }
+      rewrite H.
+      destruct t; try reflexivity; invs_utd; contradiction.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_case. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X0 as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      assert (HH : map (fun x => (x.1, rho Γ x.2)) brs = map (on_snd (rho Γ)) brs'). {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy []. f_equal; tas.
+        eapply H1; trea. cbn. eapply (size_In (size ∘ snd)) in Hx. lia. }
+      invs_utd. rewrite Heq; cbn. f_equal; tas.
+      eapply eq_map_forall_In; tea.
+      intros x y Hx Hy X3. eapply H1; trea.
+      eapply size_In' in Hx. cbn.
+      clear H2. sap decompose_app_inv in e.
+      rewrite e size_mkApps. cbn; lia.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_case. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X0 as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      assert (HH : map (fun x => (x.1, rho Γ x.2)) brs = map (on_snd (rho Γ)) brs'). {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy []. f_equal; tas.
+        eapply H1; trea. cbn. eapply (size_In (size ∘ snd)) in Hx. lia. }
+      erewrite H by eauto. erewrite H0 by eauto. clear H H0.
+      invs_utd. rewrite Heq. f_equal; tas.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_proj. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      destruct t; try invs Y1.
+      assert (fold_fix_context rho Γ [] mfix
+              = fold_fix_context rho Γ [] mfix0) as ee. {
+        rewrite !fold_fix_context_rev. f_equal.
+        eapply eq_mapi_forall_In; tea; cbn.
+        intros x y Hx Hy (? & ? & ? & ?) ?i.
+        f_equal; tas. f_equal. eapply H0; trea.
+        apply mfixpoint_size_In in Hx as []; lia. }
+      rewrite ee.
+      assert (map_fix rho Γ (fold_fix_context rho Γ [] mfix0) mfix
+              = map_fix rho Γ (fold_fix_context rho Γ [] mfix0) mfix0) as ff. {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy ?; rdest. f_equal; tas.
+        + eapply H0; trea. apply mfixpoint_size_In in Hx as []; lia.
+        + eapply H0; trea. apply mfixpoint_size_In in Hx as []; lia. }
+      rewrite ff. rewrite nth_error_map.
+      destruct (nth_error mfix0 idx0) eqn:gg; cbnr.
+      + f_equal; auto. f_equal. f_equal.
+        * erewrite map_cofix_subst'; cbnr.
+          intro. now simprho.
+        * eapply eq_map_forall_In; tea.
+          intros x y Hx Hy X3. eapply H1; trea.
+          eapply size_In' in Hx. cbn.
+          clear H3. sap decompose_app_inv in e.
+          rewrite e size_mkApps. cbn; lia.
+      + f_equal; auto.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_proj. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      erewrite H by eauto. clear H.
+      destruct t; try reflexivity; invs_utd; contradiction.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_proj. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      invs_utd. erewrite H; eauto. destruct ?; cbnr.
+      clear H0 H1. revert e0. simprho. intro e0. rewrite nth_error_map in e0.
+      destruct (nth_error l (n0 + n)) eqn:ff; [|discriminate].
+      eapply All2_nth_error_Some in Y2 as [? [e2 ?]]; tea. rewrite e2.
+      invs e0. eapply Hind; trea.
+      apply nth_error_In, size_In' in ff.
+          sap decompose_app_inv in e. cbn.
+          rewrite e size_mkApps. cbn; lia.
+    - etransitivity. simprho. reflexivity.
+      rewrite rho_app_proj. destruct (decompose_app c') eqn:e1.
+      apply decompose_app_upto_domain in X as Y.
+      rewrite e1 -e in Y. cbn in Y. destruct Y as [Y1 Y2].
+      invs_utd. erewrite H; eauto. destruct ?; cbnr.
+      clear H0 H1. revert e0. simprho. intro e0. rewrite nth_error_map in e0.
+      destruct (nth_error l (n0 + n)) eqn:ff; [discriminate|].
+      eapply All2_nth_error_None in Y2; tea. now rewrite Y2.
+      Unshelve. all: assumption.
+  Qed.
 
 
 (* todo clean All2 map *)
