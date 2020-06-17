@@ -1934,6 +1934,57 @@ Section Rho.
   Qed.
 
 
+  Lemma eq_map_forall_In {A B} P (f : A -> B) l l' :
+    All2 P l l' -> (forall x y, In x l -> In y l' -> P x y -> f x = f y)
+    -> map f l = map f l'.
+  Proof.
+    intros X Y; induction X; cbnr.
+    f_equal. apply Y; tas; now left.
+    apply IHX. intros x0 y0 H H0. apply Y; now right.
+  Qed.
+
+  Lemma eq_mapi_forall_In {A B} P (f : nat -> A -> B) l l' :
+    All2 P l l' -> (forall x y, In x l -> In y l' -> P x y -> forall i, f i x = f i y)
+    -> mapi f l = mapi f l'.
+  Proof.
+    unfold mapi.
+    intros X Y; generalize 0 as k; induction X; intro k; cbnr.
+    f_equal. apply Y; tas; now left.
+    apply IHX. intros x0 y0 H H0. apply Y; now right.
+  Qed.
+
+
+Lemma upto_domain_mkApps_inv' t u args :
+  upto_domain (mkApps u args) t ->
+  ∑ u0 args0, t = mkApps u0 args0 × upto_domain u u0 × All2 upto_domain args args0.
+Proof.
+  revert t. induction args using MCList.rev_ind; cbn; intros t X.
+  - now exists t, [].
+  - rewrite <- mkApps_nested in X; cbn in X. invs X.
+    apply IHargs in X0 as (u1 & args0 & ? & ? & ?).
+    exists u1, (args0 ++ [u']); intuition auto.
+    + rewrite <- mkApps_nested; cbn; now f_equal.
+    + apply All2_app; auto.
+Qed.
+
+Ltac invs_utd :=
+  repeat match goal with
+         | H : upto_domain ?t (mkApps _ _) |- _
+           => apply upto_domain_mkApps_inv in H;
+             destruct H as (? & ? & ? & ? & ?); subst t
+         | H : upto_domain (mkApps _ _) ?t |- _
+           => apply upto_domain_mkApps_inv' in H;
+             destruct H as (? & ? & ? & ? & ?); subst t
+         | H : upto_domain _ _ |- _ => invs H; [idtac]
+         end.
+
+Lemma upto_domain_isFixLambda_app t u :
+  upto_domain t u -> isFixLambda_app t = isFixLambda_app u.
+Proof.
+  induction 1; cbnr.
+  destruct t; invs X1; trea.
+Qed.
+
 
   Lemma rho_eta_upto_domain Γ t u :
     reduce_eta ->
@@ -1942,9 +1993,10 @@ Section Rho.
   Proof.
     intro Hre. revert u.
     funelim (rho Γ t); intros uu Hu; invs_utd.
-    1-23: repeat (simp rho; cbn -[inspect]); try reflexivity.
+    1-23: repeat (simp rho; cbn -[inspect]);
+      try (repeat (rewrite ?Heq ?Heq0; cbn); reflexivity).
     - simp rho. f_equal.
-      apply All2_eq. eapply All2_map. eapply All2_impl_In; tea.
+      eapply eq_map_forall_In; tea.
       intros x y H0 H1 X0. eapply H; tea; cbnr.
       constructor. now apply size_In.
     - simp rho. f_equal; auto.
@@ -1956,97 +2008,31 @@ Section Rho.
       assert (fold_fix_context rho Γ [] mfix
               = fold_fix_context rho Γ [] mfix') as ee. {
         rewrite !fold_fix_context_rev. f_equal.
-        eapply All2_eq. eapply All2_mapi.
-        eapply All2_impl'; tea.
-        eapply Forall_All, Forall_forall.
-        intros x H1 y (? & ? & ? & ?) i.
+        eapply eq_mapi_forall_In; tea; cbn.
+        intros x y Hx ? (? & ? & ? & ?) i.
         f_equal; tas. f_equal. eapply H; trea.
-        apply mfixpoint_size_In in H1 as []. lia. }
-      destruct ee. eapply All2_eq. eapply All2_map.
-      eapply All2_impl'; tea.
-      eapply Forall_All, Forall_forall.
-      intros x H1 y (? & ? & ? & ?). cbn. f_equal; tas.
+        apply mfixpoint_size_In in Hx as []. lia. }
+      destruct ee. eapply eq_map_forall_In; tea; cbn.
+      intros x y Hx Hy (? & ? & ? & ?). f_equal; tas.
       * eapply H; trea.
-        apply mfixpoint_size_In in H1 as []. lia.
+        apply mfixpoint_size_In in Hx as []. lia.
       * eapply H; trea.
-        apply mfixpoint_size_In in H1 as []. lia.
-    - f_equal.
-      rename mfix0 into mfix.
+        apply mfixpoint_size_In in Hx as []. lia.
+    - f_equal. rename mfix0 into mfix.
       assert (fold_fix_context rho Γ [] mfix
               = fold_fix_context rho Γ [] mfix') as ee. {
         rewrite !fold_fix_context_rev. f_equal.
-        eapply All2_eq. eapply All2_mapi.
-        eapply All2_impl'; tea.
-        eapply Forall_All, Forall_forall.
-        intros x H1 y (? & ? & ? & ?) i.
+        eapply eq_mapi_forall_In; tea; cbn.
+        intros x y Hx ? (? & ? & ? & ?) i.
         f_equal; tas. f_equal. eapply H; trea.
-        apply mfixpoint_size_In in H1 as []. lia. }
-      destruct ee. eapply All2_eq. eapply All2_map.
-      eapply All2_impl'; tea.
-      eapply Forall_All, Forall_forall.
-      intros x H1 y (? & ? & ? & ?). cbn. f_equal; tas.
+        apply mfixpoint_size_In in Hx as []. lia. }
+      destruct ee. eapply eq_map_forall_In; tea; cbn.
+      intros x y Hx Hy (? & ? & ? & ?). f_equal; tas.
       * eapply H; trea.
-        apply mfixpoint_size_In in H1 as []. lia.
+        apply mfixpoint_size_In in Hx as []. lia.
       * eapply H; trea.
-        apply mfixpoint_size_In in H1 as []. lia.
-    - now erewrite Heq.
-    - now erewrite Heq.
-    - now erewrite Heq.
-    - admit.
-    - admit.
-      (* rewrite Heq; cbn; auto. f_equal; auto. *)
-      (* apply H0. now constructor. *)
-    - admit.
-      (* rewrite Heq; cbn; auto. f_equal. *)
-      (* apply H. now constructor. *)
-    - sap upto_domain_mkApps_inv in X.
-      destruct X as (? & ? & ? & ? & ?); subst.
-      invs_utd. repeat (cbn; simp rho).
-      enough (map_fix rho Γ (fold_fix_context rho Γ [] mfix) mfix
-              = map_fix rho Γ (fold_fix_context rho Γ [] mfix0) mfix0) as ee. {
-        destruct ee.
-        assert (map (rho Γ) (l ++ [a]) = map (rho Γ) (x0 ++ [u'])). {
-          admit. }
-        destruct ?; [|congruence]. destruct p.
-        rewrite (is_constructor_upto_domain _ _ (x0 ++ [u'])). {
-          apply All2_app; utd. now symmetry. }
-        destruct ?; congruence. }
-      rename mfix0 into mfix'.
-      assert (fold_fix_context rho Γ [] mfix
-              = fold_fix_context rho Γ [] mfix') as ee. {
-        rewrite !fold_fix_context_rev. f_equal.
-        eapply All2_eq. eapply All2_mapi.
-        eapply All2_sym in X.
-        eapply All2_impl'; tea.
-        eapply Forall_All, Forall_forall.
-        intros x ? y [? []] ?. 
-        f_equal. admit.
-        f_equal. eapply H; trea.
-        apply mfixpoint_size_In in H2 as []. lia. now symmetry. }
-      destruct ee. eapply All2_eq. eapply All2_map.
-      eapply All2_sym in X.
-      eapply All2_impl'; tea.
-      eapply Forall_All, Forall_forall.
-      intros x H2 y X1; rdest. cbn. symmetry in u, u0, e. f_equal; tas.
-      * admit.
-      * eapply H; trea. apply mfixpoint_size_In in H2 as []. lia.
-      * eapply H; trea. apply mfixpoint_size_In in H2 as []. lia.
-    - f_equal; auto. etransitivity; try eapply H1; tea.
-      apply rho_upto_types. now constructor.
-    - admit.
-    (* - erewrite H; tea. erewrite H1. 2: constructor; eassumption. *)
-    (*   f_equal; cbnr. *)
-    (*   apply map_ext_in. *)
-    (*   intros a H3. eapply H2; tea; cbnr. apply size_In' in H3. *)
-    (*   rewrite size_mkApps. rewrite list_size_app in H3; cbn in H3. lia. *)
-    - admit.
-      (* rewrite Heq; cbn. f_equal; auto. *)
-    - now rewrite Heq.
-    - now rewrite Heq.
-    - rewrite Heq0. cbn. now rewrite Heq.
-    - rewrite Heq0. cbn. now rewrite Heq.
-
-    - simp rho.
+        apply mfixpoint_size_In in Hx as []. lia.
+    - 
       destruct (inv_lift_upto_domain 1 0 t'1) as [[t'' [u' l']]|XX] eqn:ee.
       2:{ exfalso. eapply XX. etransitivity; tea. now symmetry. }
       assert (view_eta_redex reduce_eta (tApp t'1 (tRel 0))
@@ -2058,8 +2044,7 @@ Section Rho.
       eapply lift_inj_upto_domain. etransitivity; tea.
       etransitivity; tea. now symmetry.
     - discriminate.
-    - simp rho.
-      assert (∑ d', view_eta_redex reduce_eta t'
+    - assert (∑ d', view_eta_redex reduce_eta t'
                     = eta_redex_view3 reduce_eta i0 t' d') as ff. {
         destruct reduce_eta; try discriminate.
         rewrite (uip_bool _ _ i0 eq_refl).
@@ -2072,41 +2057,52 @@ Section Rho.
         cbn. eexists; reflexivity. }
       destruct ff as [d' ff].
       rewrite ff. cbn. f_equal. eauto.
-    - simp rho. symmetry in X. invs_utd.
-      rewrite view_lambda_fix_app_fix_app. cbn. simp rho.
-      enough (map_fix rho Γ (fold_fix_context rho Γ [] mfix0) mfix0
-              = map_fix rho Γ (fold_fix_context rho Γ [] mfix) mfix) as ee. {
-        destruct ee.
-        assert (All2 upto_domain (l ++ [a]) (x0 ++ [u'])) as HH. {
-          eapply All2_app. symmetry; tea. now constructor. }
-        assert (map (rho Γ) (l ++ [a]) = (map (rho Γ) (x0 ++ [u']))) as ee. {
-          apply All2_eq. eapply All2_map. eapply All2_impl_In; tea.
-          intros x y H2 H3 X1. eapply H1; tea; cbnr.
-          apply size_In' in H2. rewrite list_size_app in H2; cbn in H2.
-          rewrite size_mkApps. lia. }
-        destruct ee. destruct ?; cbnr. destruct p.
-        assert (is_constructor n (l ++ [a])
-                = is_constructor n (x0 ++ [u'])) as ee. {
-          now apply is_constructor_upto_domain. }
-        now rewrite ee. }
-      assert (fold_fix_context rho Γ [] mfix0 = fold_fix_context rho Γ [] mfix)
-        as ee. {
+    - assert (fold_fix_context rho Γ [] mfix
+              = fold_fix_context rho Γ [] mfix') as ee. {
         rewrite !fold_fix_context_rev. f_equal.
-        apply All2_eq. eapply All2_mapi. eapply All2_impl_In; tea; cbn.
-        intros [na ty bo ra] [na' ty' bo' ra'] H2 H3 [uu [uu' []]] k; cbn in *.
-        assert (ee : na = na') by admit. destruct ee. do 2 f_equal.
-        symmetry. symmetry in uu. eapply H1; tea; cbnr. rewrite size_mkApps; cbn.
-        apply mfixpoint_size_In in H3 as []; cbn in *. lia. }
+        eapply eq_mapi_forall_In; tea; cbn.
+        intros x y Hx Hy (? & ? & ? & ?) ?i.
+        f_equal; tas. f_equal. eapply H; trea.
+        apply mfixpoint_size_In in Hx as []; lia. }
       destruct ee.
-      apply All2_eq. eapply All2_map. eapply All2_impl_In; tea. cbn.
-      intros [na ty bo ra] [na' ty' bo' ra'] H2 H3 [uu [uu' []]]; cbn in *. 
-      assert (ee : na = na') by admit. destruct ee. f_equal.
-      + symmetry. symmetry in uu. eapply H1; tea; cbnr. rewrite size_mkApps; cbn.
-        apply mfixpoint_size_In in H3 as []; cbn in *. lia.
-      + symmetry. symmetry in uu'. eapply H1; tea; cbnr. rewrite size_mkApps; cbn.
-        apply mfixpoint_size_In in H3 as []; cbn in *. lia.
-    - simp rho. erewrite H; tea. f_equal. etransitivity.
-      eapply H1; tea. apply rho_upto_types. now constructor.
+      assert (map_fix rho Γ (fold_fix_context rho Γ [] mfix) mfix
+              = map_fix rho Γ (fold_fix_context rho Γ [] mfix) mfix') as ee. {
+        eapply eq_map_forall_In; tea; cbn.
+        intros x y Hx Hy X1; rdest. f_equal; tas.
+        + eapply H; trea. apply mfixpoint_size_In in Hx as []; lia.
+        + eapply H; trea. apply mfixpoint_size_In in Hx as []; lia. }
+      destruct ee.
+      assert (map (rho Γ) (l ++ [a]) = map (rho Γ) (x0 ++ [u'])). {
+        eapply eq_map_forall_In.
+        eapply All2_app; tea. now constructor.
+        intros x y Hx Hy X1. eapply H1; trea. eapply size_In' in Hx.
+        cbn. rewrite size_mkApps; cbn.
+        rewrite list_size_app in Hx. cbn in Hx. lia. }
+      destruct ?; [|congruence]. destruct p.
+      rewrite (is_constructor_upto_domain _ _ (x0 ++ [u'])). {
+        apply All2_app; utd. }
+      destruct ?; congruence.
+    - f_equal; auto. etransitivity; try eapply H1; tea.
+      apply rho_upto_types. now constructor.
+    - change (mkApps (tApp (tLambda na' ty' t'0) u'0) x0)
+        with (mkApps (tLambda na' ty' t'0) (u'0 :: x0)).
+      rewrite view_lambda_fix_app_lambda_app.
+      repeat (cbn; simp rho).
+      erewrite H; tea. f_equal.
+      + f_equal. etransitivity; [eapply H1|]; tea.
+        apply rho_upto_types. now constructor.
+      + eapply eq_map_forall_In.
+        eapply All2_app; tea. now constructor.
+        intros x y Hx Hy ?. eapply H2; trea. eapply size_In' in Hx.
+        cbn. rewrite size_mkApps; cbn.
+        rewrite list_size_app in Hx. cbn in Hx. lia.
+    - assert (~~ isFixLambda_app (tApp t' u')) as HH. {
+        erewrite upto_domain_isFixLambda_app; tea. symmetry; utd. }
+      rewrite view_lambda_fix_app_other. cbn.
+      f_equal; eauto.
+
+
+
 
 
 
